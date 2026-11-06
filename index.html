@@ -1,0 +1,2429 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpticsBox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the circuit drawing spans the top; settings + blocks on the left, results on the right */
+:root {
+  --bg: #f3f5f8; --panel: #ffffff; --ink: #18202c; --muted: #566275; --line: #d9dee7; --rail: #b8c2d2;
+  --accent: #2456d6; --accent-soft: #e4ebfc; --tip-bg: #18202c; --tip-ink: #f3f5f8;
+  --c-o1: #2456d6; --c-o2: #c2410c; --c-r1: #0f8a6a; --c-r2: #8b5cf6;
+  --c-o3: #be185d; --c-o4: #0e7490; --c-o5: #a16207; --c-o6: #4d7c0f; --c-r3: #64748b; --c-r4: #b91c1c; --c-r5: #0369a1; --c-r6: #7c2d12;
+  --good: #11804f; --bad: #c0262d; --grid: #e6e9ef; --wg: #3a4a66; --bench: #f8f9fb;
+  --f-display: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11151c; --panel: #181e27; --ink: #e5e9f0; --muted: #9aa6b8; --line: #2a3340; --rail: #3a4656;
+  --accent: #7ea2ff; --accent-soft: #1d2a47; --tip-bg: #e5e9f0; --tip-ink: #11151c;
+  --c-o1: #7ea2ff; --c-o2: #fb923c; --c-r1: #34d399; --c-r2: #c4b5fd;
+  --c-o3: #f472b6; --c-o4: #22d3ee; --c-o5: #facc15; --c-o6: #a3e635; --c-r3: #94a3b8; --c-r4: #f87171; --c-r5: #38bdf8; --c-r6: #fdba74;
+  --good: #4ade80; --bad: #f87171; --grid: #222a35; --wg: #8fa3c4; --bench: #141922; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11151c; --panel: #181e27; --ink: #e5e9f0; --muted: #9aa6b8; --line: #2a3340; --rail: #3a4656;
+  --accent: #7ea2ff; --accent-soft: #1d2a47; --tip-bg: #e5e9f0; --tip-ink: #11151c;
+  --c-o1: #7ea2ff; --c-o2: #fb923c; --c-r1: #34d399; --c-r2: #c4b5fd;
+  --c-o3: #f472b6; --c-o4: #22d3ee; --c-o5: #facc15; --c-o6: #a3e635; --c-r3: #94a3b8; --c-r4: #f87171; --c-r5: #38bdf8; --c-r6: #fdba74;
+  --good: #4ade80; --bad: #f87171; --grid: #222a35; --wg: #8fa3c4; --bench: #141922; color-scheme: dark }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--f-display); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 48px; }
+h1 { font-size: 24px; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 16px; margin: 0; font-weight: 650; }
+.mono, code, pre { font-family: var(--f-mono); }
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 14px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand svg { width: 40px; height: 32px; flex: none; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; border-radius: 0; background: transparent; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--panel); }
+.grid { display: grid; grid-template-columns: minmax(320px, 440px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: end; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+input, select { font: 14px var(--f-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 8px; width: 104px; }
+select { width: auto; font-family: var(--f-display); }
+input[type="range"] { width: 120px; padding: 0; border: 0; background: transparent; accent-color: var(--accent); }
+input.sym { width: 120px; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input.bad { border-color: var(--bad); }
+button { font: 600 14px var(--f-display); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button[aria-pressed="true"]:not(.seg button) { background: var(--accent-soft); border-color: var(--accent); }
+button.icon { padding: 4px 9px; font-weight: 500; }
+button:disabled { opacity: .4; cursor: default; }
+button.link { border: 0; background: none; color: var(--accent); padding: 4px 0; font-weight: 500; }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+.err { color: var(--bad); font-size: 14px; }
+.err:empty { display: none; }
+[data-tip], [data-tipk] { cursor: help; }
+input, select, button, .sb, .grip { cursor: auto; }
+button, select { cursor: pointer; }
+/* tooltips */
+.tip { position: fixed; z-index: 60; max-width: 340px; background: var(--tip-bg); color: var(--tip-ink); font: 13px/1.45 var(--f-display);
+  padding: 9px 11px; border-radius: 8px; pointer-events: none; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+.tip b { font-weight: 650; }
+.tip .f { font-family: var(--f-mono); font-size: 12.5px; }
+/* the block list */
+.rail { position: relative; display: flex; flex-direction: column; gap: 10px; padding-left: 18px; }
+.rail::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--rail); border-radius: 2px; }
+.port { font: 500 12px var(--f-mono); color: var(--muted); position: relative; }
+.port::before { content: ""; position: absolute; left: -16px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--rail); }
+.block { position: relative; border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel); }
+.block::before { content: ""; position: absolute; left: -16px; top: 17px; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); }
+.block.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.bhead { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.bhead b { flex: 1; font-size: 15px; cursor: pointer; }
+.bhead .n { font: 600 12px var(--f-mono); color: var(--accent); }
+.arm { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding-top: 4px; }
+.arm + .arm { border-top: 1px dashed var(--line); margin-top: 10px; padding-top: 10px; }
+.arm .tag { font-size: 13px; font-weight: 600; width: 100%; }
+.fieldrow { display: flex; gap: 8px; align-items: center; }
+.bind { font: 600 11px var(--f-mono); color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 0 5px; }
+.calc { font: 13px var(--f-mono); color: var(--muted); width: 100%; }
+/* presets, params, share */
+.plist { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.plist div { display: flex; align-items: center; gap: 8px; }
+.plist span { flex: 1; font-size: 14px; }
+.ptable { display: flex; flex-direction: column; gap: 10px; }
+.prow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.prow .pn { font: 600 14px var(--f-mono); min-width: 60px; color: var(--accent); }
+.prow input.mm { width: 72px; }
+textarea { width: 100%; min-height: 70px; font: 12px var(--f-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 8px; }
+/* results */
+.readout { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.readout.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 560px) { .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { border-left: 4px solid var(--k); padding: 2px 0 2px 10px; }
+.stat .k { font-size: 13px; color: var(--muted); }
+.stat .v { font: 500 20px var(--f-mono); font-variant-numeric: tabular-nums; }
+.stat .s { font: 400 12px var(--f-mono); color: var(--muted); }
+.why { margin-top: 10px; font-size: 13px; color: var(--muted); background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.why:empty { display: none; }
+.pill { font: 600 12px var(--f-mono); padding: 3px 9px; border-radius: 99px; }
+.pill.ok { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.pill.warn { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.pill.info { color: var(--muted); background: var(--bg); }
+.chartbox { position: relative; }
+canvas { width: 100%; height: 340px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; margin-top: 8px; }
+.legend label { flex-direction: row; align-items: center; gap: 6px; color: var(--ink); font-size: 13px; }
+.legend input { width: auto; }
+.sw { width: 16px; height: 3px; border-radius: 2px; background: var(--k); display: inline-block; }
+#cursor { position: absolute; top: 8px; right: 10px; font: 500 12px var(--f-mono); color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 2px 7px; border-radius: 5px; }
+/* matrices */
+.mats { display: flex; flex-direction: column; gap: 14px; }
+.mcard { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.mcard.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.mcard h3 { font-size: 14px; margin: 0 0 6px; font-weight: 650; }
+.mcard .defs { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.mx { overflow-x: auto; }
+table { border-collapse: collapse; font: 13px var(--f-mono); font-variant-numeric: tabular-nums; }
+td, th { padding: 5px 10px; text-align: center; white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+td { border: 1px solid var(--grid); }
+td.z { color: var(--rail); }
+td:hover { background: var(--accent-soft); }
+sub, sup { font-size: .72em; line-height: 0; }
+pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12.5px; margin: 0; max-height: 520px; }
+/* the circuit drawing */
+.bench { margin-bottom: 16px; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { touch-action: none; user-select: none; cursor: grab; display: inline-flex; align-items: center; gap: 7px; }
+.chip svg { width: 28px; height: 18px; }
+.chip svg path, .chip svg circle { fill: none; stroke: var(--wg); stroke-width: 2; }
+.svgwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--bench); margin-top: 12px; }
+#sch { display: block; }
+#sch .core { fill: none; stroke: var(--wg); stroke-width: 4; stroke-linecap: round; }
+#sch .flow { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 3 9; animation: flow 1.2s linear infinite; opacity: .9; }
+#sch.fwd .flow.back { display: none; }
+@keyframes flow { to { stroke-dashoffset: -24; } }
+#sch .zone { fill: var(--accent-soft); opacity: .7; }
+#sch .hit { fill: transparent; stroke: transparent; }
+#sch .sb { cursor: grab; touch-action: none; }
+#sch .sb:hover .hit { stroke: var(--rail); stroke-dasharray: 4 4; }
+#sch .sb.sel .hit { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: none; fill: color-mix(in srgb, var(--accent) 6%, transparent); }
+#sch .lbl { fill: var(--muted); font: 12px var(--f-mono); }
+#sch .bn { fill: var(--accent); font: 600 12px var(--f-display); }
+#sch .portl { fill: var(--muted); font: 500 12px var(--f-mono); }
+#sch .portl.lit { fill: var(--accent); font-weight: 600; }
+#sch .armhl { fill: var(--accent); opacity: .16; pointer-events: none; }
+#sch .lanex { fill: var(--muted); font: 600 12px var(--f-display); cursor: pointer; }
+#sch .lanex:hover { fill: var(--bad); }
+.toast button { margin-left: 10px; padding: 3px 10px; }
+#sch .ins { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+#sch .empty { fill: var(--muted); font: 14px var(--f-display); }
+#sch .grip { cursor: ew-resize; touch-action: none; }
+#sch .grip circle { fill: var(--panel); stroke: var(--accent); stroke-width: 2; }
+#sch .grip path { stroke: var(--accent); stroke-width: 1.5; fill: none; }
+#sch .grip:hover circle { fill: var(--accent-soft); }
+.ghost { position: fixed; z-index: 50; pointer-events: none; padding: 6px 10px; border-radius: 8px; background: var(--accent); color: var(--panel);
+  font: 600 13px var(--f-display); box-shadow: 0 6px 20px rgba(0,0,0,.25); transform: translate(-50%, -130%); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs button { border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--muted); padding: 9px 14px; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { background: var(--panel); border-color: var(--line); color: var(--ink); }
+.step { display: inline-flex; align-items: stretch; }
+.step input { border-radius: 0; width: 86px; text-align: center; }
+.step button { padding: 0 9px; border-radius: 0; font: 600 15px var(--f-mono); }
+.step button:first-child { border-radius: 7px 0 0 7px; border-right: 0; }
+.step button:last-child { border-radius: 0 7px 7px 0; border-left: 0; }
+.mpair { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.mpair > div { min-width: 0; }
+.mpair .cap { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+#sch .pv { font: 600 12px var(--f-mono); }
+#sch .pvs { font: 11px var(--f-mono); fill: var(--muted); }
+#sch .heater { fill: color-mix(in srgb, var(--c-o2) 18%, var(--panel)); stroke: var(--c-o2); stroke-width: 1.5; }
+#sch .mirror { fill: var(--c-r1); }
+#sch .tooth { fill: var(--wg); }
+#sch .mmi { fill: var(--accent-soft); stroke: var(--wg); stroke-width: 2; }
+#sch .edgel { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 6 5; }
+#sch .yzone { fill: var(--accent-soft); stroke: var(--rail); stroke-width: 1.2; stroke-dasharray: 4 3; opacity: .85; }
+#sch .rad { fill: none; stroke: var(--rail); stroke-width: 3; stroke-dasharray: 2 5; stroke-linecap: round; }
+#sch .probe-line { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; }
+#sch .probe-lbl, #sch .probe-head { font: 600 12px var(--f-mono); fill: var(--ink); paint-order: stroke; stroke: var(--bench); stroke-width: 5px; stroke-linejoin: round; }
+#sch .probe-head { fill: var(--accent); }
+#sch.probing { cursor: crosshair; }
+#sch .grp { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+#sch .gname { fill: var(--accent); font: 600 12px var(--f-display); }
+.chip.mine { border-style: dashed; }
+.editor { margin-top: 12px; }
+.editor .block { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.editor .block::before { display: none; }
+.refbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
+.refbar input { width: min(320px, 100%); font-family: var(--f-display); }
+.pager { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; margin-top: 12px; }
+.pager button[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.confirm { margin-bottom: 16px; border-color: var(--bad); }
+button.danger { background: var(--bad); border-color: var(--bad); color: var(--panel); }
+.toast { position: fixed; z-index: 70; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: min(520px, calc(100vw - 32px));
+  background: var(--tip-bg); color: var(--tip-ink); font: 14px/1.45 var(--f-display); padding: 12px 16px; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.3); }
+@media (prefers-reduced-motion: reduce) { #sch .flow { animation: none; } * { transition: none !important; } }
+</style>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 40 32" aria-hidden="true">
+      <path d="M3 9 L11 4 H25 L17 9 Z" fill="var(--accent-soft)" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M17 9 L25 4 V22 L17 27 Z" fill="var(--accent-soft)" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>
+      <rect x="3" y="9" width="14" height="18" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M21 15 C24 9 26 9 28.5 15 S33 21 35.5 15 S38 11 39 12" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <h1>OpticsBox</h1>
+  </div>
+  <div class="tools">
+    <div class="seg" role="group" aria-label="Direction of light" data-tipk="model">
+      <button data-model="bi">Bidirectional</button><button data-model="fwd">Forward only</button>
+    </div>
+    <button id="undobtn" data-tipk="undo" aria-label="Undo" disabled>↶ Undo</button>
+    <button id="redobtn" data-tipk="redo" aria-label="Redo" disabled>↷ Redo</button>
+    <button id="resetbtn" data-tipk="reset" aria-haspopup="dialog">Reset</button>
+    <button id="sharebtn" class="primary" data-tipk="share" style="background:var(--accent);border-color:var(--accent);color:var(--panel)">Share</button>
+  </div>
+</header>
+<div class="panel confirm" id="resetconfirm" role="alertdialog" aria-labelledby="rc-title" aria-describedby="rc-text" hidden>
+  <h2 id="rc-title">Reset the circuit?</h2>
+  <p class="note" id="rc-text">All components, parameters and source settings return to their defaults (2 waveguides, 1550 nm, Bidirectional). Saved presets and custom components are kept. This can be undone.</p>
+  <div class="row" style="margin-top:12px"><button id="rc-yes" class="danger">Reset</button><button id="rc-no">Cancel</button></div>
+</div>
+
+<section class="panel bench">
+  <div class="head" style="margin-bottom:0">
+    <div class="row" style="align-items:center"><h2>Circuit</h2><button id="probebtn" aria-pressed="false" data-tipk="probe">Probe</button></div>
+    <div class="palette" id="palette">
+      <button class="chip" data-add="lane" data-tipk="add-lane" aria-label="Add a waveguide"><svg viewBox="0 0 28 18"><path d="M0 4 H28 M0 14 H20"/><path d="M24 10 V18 M20 14 H28"/></svg>Waveguide</button>
+      <button class="chip" data-add="wg" data-tipk="add-wg" aria-label="Add waveguide sections"><svg viewBox="0 0 28 18"><path d="M0 4 H28 M0 13 H7 C10 13 10 17 14 17 C18 17 18 13 21 13 H28"/></svg>Waveguides</button>
+      <button class="chip" data-add="phase" data-tipk="add-phase" aria-label="Add a phase shifter"><svg viewBox="0 0 28 18"><path d="M0 9 H28 M9 5 h10 v8 h-10 z"/></svg>Phase shifter</button>
+      <button class="chip" data-add="atten" data-tipk="add-atten" aria-label="Add a loss element"><svg viewBox="0 0 28 18"><path d="M0 9 H8 L10 4 L13 14 L16 4 L19 14 L21 9 H28"/></svg>Loss</button>
+      <button class="chip" data-add="edge" data-tipk="add-edge" aria-label="Add a chip edge or grating coupler"><svg viewBox="0 0 28 18"><path d="M0 5 H28 M0 13 H28 M14 0 V3 M14 7 V11 M14 15 V18"/></svg>Chip edge</button>
+      <button class="chip" data-add="mirror" data-tipk="add-mirror" aria-label="Add a partial mirror"><svg viewBox="0 0 28 18"><path d="M0 9 H28 M14 2 V16"/></svg>Mirror</button>
+      <button class="chip" data-add="cross" data-tipk="add-cross" aria-label="Add a waveguide crossing"><svg viewBox="0 0 28 18"><path d="M0 3 H6 L22 15 H28 M0 15 H6 L22 3 H28"/></svg>Crossing</button>
+      <button class="chip" data-add="ysplit" data-tipk="add-ysplit" aria-label="Add a Y-splitter"><svg viewBox="0 0 28 18"><path d="M0 9 H8 C14 9 14 3 20 3 H28 M8 9 C14 9 14 15 20 15 H28"/></svg>Y-splitter</button>
+      <button class="chip" data-add="ycomb" data-tipk="add-ycomb" aria-label="Add a Y-combiner"><svg viewBox="0 0 28 18"><path d="M0 3 H8 C14 3 14 9 20 9 H28 M0 15 H8 C14 15 14 9 20 9"/></svg>Y-combiner</button>
+      <button class="chip" data-add="mmi" data-tipk="add-mmi" aria-label="Add an MMI 50/50 splitter"><svg viewBox="0 0 28 18"><path d="M0 4 H7 M0 14 H7 M21 4 H28 M21 14 H28 M7 1 h14 v16 h-14 z"/></svg>MMI 50/50</button>
+      <button class="chip" data-add="coupler" data-tipk="add-coupler" aria-label="Add a directional coupler"><svg viewBox="0 0 28 18"><path d="M0 3 H7 C10 3 10 7 13 7 H15 C18 7 18 3 21 3 H28 M0 15 H7 C10 15 10 11 13 11 H15 C18 11 18 15 21 15 H28"/></svg>Coupler</button>
+      <button class="chip" data-add="dcl" data-tipk="add-dcl" aria-label="Add a wavelength-dependent coupler"><svg viewBox="0 0 28 18"><path d="M0 3 H7 C10 3 10 7 13 7 H15 C18 7 18 3 21 3 H28 M0 15 H7 C10 15 10 11 13 11 H15 C18 11 18 15 21 15 H28 M12 9 h4"/></svg>Coupler (λ)</button>
+      <button class="chip" data-add="slm1" data-tipk="add-slm1" aria-label="Add one SLM"><svg viewBox="0 0 28 18"><path d="M0 14 H28"/><circle cx="14" cy="7" r="5.5"/></svg>SLM</button>
+      <button class="chip" data-add="slm2" data-tipk="add-slm2" aria-label="Add an SLM pair"><svg viewBox="0 0 28 18"><path d="M0 6 H28 M0 12 H28"/><circle cx="9" cy="3" r="3"/><circle cx="19" cy="15" r="3"/></svg>SLM pair</button>
+      <button class="chip" data-add="ring" data-tipk="add-ring" aria-label="Add a ring resonator"><svg viewBox="0 0 28 18"><path d="M0 15 H28"/><rect x="7" y="1" width="14" height="10" rx="5"/></svg>Ring</button>
+      <button class="chip" data-add="adddrop" data-tipk="add-adddrop" aria-label="Add an add-drop ring"><svg viewBox="0 0 28 18"><path d="M0 2 H28 M0 16 H28"/><circle cx="14" cy="9" r="5"/></svg>Add-drop ring</button>
+      <button class="chip" data-add="bragg" data-tipk="add-bragg" aria-label="Add a Bragg grating"><svg viewBox="0 0 28 18"><path d="M0 9 H28 M7 5 V13 M11 5 V13 M15 5 V13 M19 5 V13"/></svg>Bragg grating</button>
+      <span id="myparts" style="display:contents"></span>
+    </div>
+  </div>
+  <div class="svgwrap" id="svgwrap"><svg id="sch" height="250" role="img" aria-label="Circuit drawing"></svg></div>
+  <div class="editor" id="editor" hidden></div>
+  <p class="note" style="margin-top:8px">Click a component to edit it · drag components onto the circuit to add them · drag a component sideways to reorder it, or up/down to move it to another waveguide · drag the ⟷ handles to change a waveguide length (Shift for fine steps) · hover for details.</p>
+</section>
+
+<div class="grid">
+  <div class="stack">
+    <div class="panel">
+      <div class="head"><h2>Source and sweep</h2></div>
+      <div class="row">
+        <label for="inp" data-tipk="inp">Input port<select id="inp"><option value="1">waveguide 1</option></select></label>
+      </div>
+      <div class="row" id="custin" style="margin-top:10px" hidden></div>
+      <div class="row" style="margin-top:12px">
+        <label for="lc" data-tipk="lc">centre wavelength (nm)<input id="lc" type="number" value="1550" step="0.1"></label>
+        <label for="ls" data-tipk="ls">span (nm)<input id="ls" type="number" value="10" step="0.5" min="0.001"></label>
+        <label for="np" data-tipk="np">points<input id="np" type="number" value="2001" step="100" min="11" max="20001"></label>
+        <label for="ne" data-tipk="ne">effective index<input id="ne" type="number" value="2.4" step="0.01"></label>
+        <label for="lo" data-tipk="lo">loss (dB/cm)<input id="lo" type="number" value="0" step="0.1" min="0"></label>
+        <label for="ng" data-tipk="ng">group index<input id="ng" type="number" step="0.01" placeholder="none"></label>
+        <label for="l0" data-tipk="l0">dispersion λ₀ (nm)<input id="l0" type="number" value="1550" step="0.1" min="1"></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="head">
+        <h2>Components <span class="note" style="font-weight:400">in order, input to output</span></h2>
+        <div class="row" style="align-items:center">
+          <select id="preset" aria-label="Load a preset"></select>
+          <button id="pmanage" aria-pressed="false">Presets</button>
+        </div>
+      </div>
+      <div id="ppanel" hidden style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div class="plist" id="plist"></div>
+        <div class="row"><label for="pname">Save circuit as<input id="pname" type="text" placeholder="Name" style="width:190px;font-family:var(--f-display)"></label><button id="psave">Save preset</button><button id="ppart" data-tipk="saveaspart">Save as component</button></div>
+        <button class="link" id="prestore" hidden>Bring back the built-in presets</button>
+      </div>
+      <div class="rail" id="rail"></div>
+    </div>
+
+    <div class="panel">
+      <div class="head"><h2>Parameters</h2></div>
+      <div id="params"></div>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="tabs" role="tablist" aria-label="What to show">
+      <button role="tab" data-tab="out" aria-selected="true">Output</button>
+      <button role="tab" data-tab="mat" aria-selected="false">Matrices</button>
+      <button role="tab" data-tab="ref" aria-selected="false">Reference</button>
+      <button role="tab" data-tab="py" aria-selected="false">Python</button>
+    </div>
+    <div class="err" id="err"></div>
+
+    <div data-pane="out" class="stack">
+      <div class="panel">
+        <div class="head"><h2 id="atl">Output</h2><span id="energy" class="pill ok" data-tipk="energy"></span></div>
+        <div class="readout" id="readout"></div>
+        <div class="why" id="why"></div>
+      </div>
+      <div class="panel">
+        <div class="head"><h2>Spectrum <span class="note" style="font-weight:400">power at each port, relative to the input</span></h2>
+          <div class="row" style="align-items:center"><div class="seg" role="group" aria-label="Chart scale" data-tipk="scale"><button data-scale="db" aria-pressed="true">dB</button><button data-scale="lin" aria-pressed="false">%</button></div>
+          <button id="csvbtn" data-tipk="csv">Download CSV</button></div></div>
+        <div class="chartbox"><canvas id="chart" aria-label="Spectrum of the outputs"></canvas><span id="cursor" hidden></span></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+
+    <div data-pane="mat" class="stack" hidden>
+      <div class="panel">
+        <div class="head"><h2>Component matrices</h2><span class="note" id="matnote"></span></div>
+        <div class="mats" id="mats"></div>
+      </div>
+    </div>
+
+    <div data-pane="ref" class="panel" hidden>
+      <div class="head"><h2>Component reference</h2><span class="note">general transfer matrix of each component, bidirectional and forward-only</span></div>
+      <div class="refbar"><input id="refq" type="search" placeholder="Search components" aria-label="Search the component reference"><span class="note" id="refcount"></span></div>
+      <div class="mats" id="refmats"></div>
+      <div class="pager" id="refpager"></div>
+    </div>
+
+    <div data-pane="py" class="panel" hidden>
+      <div class="head">
+        <h2>Export to Python</h2>
+        <div class="row" style="align-items:center">
+          <select id="pykind" aria-label="Kind of Python code"><option value="numpy">Numbers (NumPy)</option><option value="sympy">Formulas (SymPy)</option></select>
+          <button id="copy">Copy code</button>
+        </div>
+      </div>
+      <pre id="py"></pre>
+    </div>
+  </div>
+</div>
+
+<script id="obx-main">
+// A clean copy of this page, taken before anything is drawn: Share turns it into a standalone file
+const PAGE = (() => { const d = document.documentElement.cloneNode(true); d.querySelectorAll("script:not(#obx-main), iframe").forEach(s => s.remove()); return d; })();
+const downloadsP = (typeof window.claude === "object" && window.claude && window.claude.use) ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
+// ---------- complex maths ----------
+const C = (re, im = 0) => [re, im];
+const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
+const mul = (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
+const div = (a, b) => { const d = b[0] * b[0] + b[1] * b[1]; return [(a[0] * b[0] + a[1] * b[1]) / d, (a[1] * b[0] - a[0] * b[1]) / d]; };
+const neg = a => [-a[0], -a[1]];
+const cexp = (re, im) => { const m = Math.exp(re); return [m * Math.cos(im), m * Math.sin(im)]; };   // e^(re + j im)
+const abs2 = a => a[0] * a[0] + a[1] * a[1];
+const scale = (a, s) => [a[0] * s, a[1] * s];
+const zeros = n => Array.from({length: n}, () => Array.from({length: n}, () => C(0)));
+const eye = n => { const m = zeros(n); for (let i = 0; i < n; i++) m[i][i] = C(1); return m; };
+function matmul(A, B) {
+  const n = A.length, R = zeros(n);
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { let s = C(0); for (let k = 0; k < n; k++) s = add(s, mul(A[i][k], B[k][j])); R[i][j] = s; }
+  return R;
+}
+function pair(a, b) { const m = zeros(4); for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { m[i][j] = a[i][j]; m[i + 2][j + 2] = b[i][j]; } return m; }
+const diag2 = (a, b) => [[a, C(0)], [C(0), b]];
+
+// ---------- building blocks ----------
+// Both directions: basis [E1+, E1-, E2+, E2-], right = M · left (same as opticsbox.py)
+function coupler(k) {
+  const t = Math.sqrt(1 - k * k), m = zeros(4);
+  m[0][0] = C(t); m[0][2] = C(0, -k); m[1][1] = C(t); m[1][3] = C(0, k);
+  m[2][0] = C(0, -k); m[2][2] = C(t); m[3][1] = C(0, k); m[3][3] = C(t);
+  return m;
+}
+function slm(k, phi) {
+  const t = Math.sqrt(1 - k * k), m = C(0, 2 * k * t), d = 1 / (1 - 2 * k * k);
+  return [[scale(cexp(0, -phi), d), scale(neg(m), d)], [scale(m, d), scale(cexp(0, phi), d)]];
+}
+// Propagation constant β(λ) in rad/m (same as opticsbox.py beta()). No group index set: constant index,
+// β = 2π·n_eff/λ (the original model). Group index set: first-order dispersion about λ0,
+// β = 2π·n_eff/λ0 + (2π·n_g/λ0²)·(λ0 − λ).
+function betaOf(wl, g) {
+  if (!g.disp) return 2 * Math.PI * g.n / (wl * 1e-9);
+  const l0 = g.l0 * 1e-9; return 2 * Math.PI * g.n / l0 + 2 * Math.PI * g.ng / (l0 * l0) * (l0 - wl * 1e-9);
+}
+const alphaOf = g => g.loss * 100 * Math.LN10 / 10;                // power loss per metre
+function wgGain(Lum, wl, g) {
+  const L = Lum * 1e-6;
+  return cexp(-alphaOf(g) / 2 * L, -betaOf(wl, g) * L);
+}
+const waveguide = (Lum, wl, g) => { const e = wgGain(Lum, wl, g); return diag2(e, div(C(1), e)); };
+// Forward only: basis [E1+, E2+]; whatever a block reflects is dropped
+const couplerF = k => { const t = Math.sqrt(1 - k * k); return [[C(t), C(0, -k)], [C(0, -k), C(t)]]; };
+const slmF = (k, phi) => scale(cexp(0, -phi), 1 - 2 * k * k);       // = 1 / M22 of the SLM: what one pass lets through
+
+// ---------- more parts ----------
+// Single-waveguide parts are 2x2 [E+, E-] blocks placed on one waveguide (the other passes straight).
+// For Forward only, a 2x2 part becomes what passes it: 1 / M22.
+const db2a = dB => Math.pow(10, -dB / 20);                       // field left after a loss in dB
+const armPair = (m, arm) => arm === 2 ? pair(eye(2), m) : pair(m, eye(2));
+const armDiag = (f, arm) => arm === 2 ? diag2(C(1), f) : diag2(f, C(1));
+function couplerCS(c, k) {                                       // coupler with τ = c, κ = k
+  const m = zeros(4);
+  m[0][0] = C(c); m[0][2] = C(0, -k); m[1][1] = C(c); m[1][3] = C(0, k);
+  m[2][0] = C(0, -k); m[2][2] = C(c); m[3][1] = C(0, k); m[3][3] = C(c);
+  return m;
+}
+// Partial mirror. Power reflectance R (symmetric: reflects j√R from either side), or a real field reflection r
+// (reflects r from the left and −r from the right, power reflectance r²). Both transmit √(1 − R) = √(1 − r²).
+function mirror2(Rp) { const t = Math.sqrt(1 - Rp), r = Math.sqrt(Rp); return [[C(1 / t), C(0, r / t)], [C(0, -r / t), C(1 / t)]]; }
+function mirror2r(r) { const t = Math.sqrt(1 - r * r); return [[C(1 / t), C(-r / t)], [C(-r / t), C(1 / t)]]; }
+const mirrorOf = b => b.conv === "r" ? mirror2r(R(b.r)) : mirror2(R(b.R));
+const mirrorPass = b => b.conv === "r" ? Math.sqrt(1 - R(b.r) ** 2) : Math.sqrt(1 - R(b.R));
+const csqrt = z => { const m = Math.hypot(z[0], z[1]), re = Math.sqrt((m + z[0]) / 2), im = Math.sqrt(Math.max(0, (m - z[0]) / 2)); return [re, z[1] < 0 ? -im : im]; };
+const ccosh = z => [Math.cosh(z[0]) * Math.cos(z[1]), Math.sinh(z[0]) * Math.sin(z[1])];
+const csinh = z => [Math.sinh(z[0]) * Math.cos(z[1]), Math.cosh(z[0]) * Math.sin(z[1])];
+// All-pass ring: t = (τ − a·e^{−jβℓ}) / (1 − τ·a·e^{−jβℓ}), nothing reflected. rb = field reflection of a lossless point
+// scatterer half-way round, which couples the clockwise and counter-clockwise waves (same formulas as opticsbox.py ring_ports).
+function ringS(k, Lum, wl, g, rb = 0) {
+  if (k === 0) return {t: C(1), rho: C(0)};                       // not coupled to the waveguide
+  const tau = Math.sqrt(1 - k * k), e = wgGain(Lum, wl, g);
+  if (!rb) return {t: div(add(C(tau), neg(e)), add(C(1), neg(scale(e, tau)))), rho: C(0)};
+  const ts = Math.sqrt(1 - rb * rb), q = add(C(1), neg(scale(e, tau * ts)));
+  const G = add(scale(e, ts), neg(div(scale(mul(e, e), rb * rb * tau), q))), den = add(C(1), neg(scale(G, tau)));
+  return {t: div(add(C(tau), neg(G)), den), rho: div(mul(C(0, -k * k * rb), e), mul(den, q))};
+}
+const ringT = (k, Lum, wl, g) => ringS(k, Lum, wl, g).t;
+const rbOf = b => b.rb === undefined ? 0 : R(b.rb);
+function ringM(b, wl, g) {              // 2x2: [[t² − ρ², ρ], [−ρ, 1]] / t (reflects ρ from either side)
+  const {t, rho} = ringS(R(b.k), R(b.L), wl, g, rbOf(b));
+  if (!rho[0] && !rho[1]) return diag2(t, div(C(1), t));
+  return [[div(add(mul(t, t), neg(mul(rho, rho))), t), div(rho, t)], [neg(div(rho, t)), div(C(1), t)]];
+}
+// Uniform Bragg grating, coupled-mode theory. Period set so it reflects most at λB: β_B = β(λB); δ = β(λ) − β_B − jα/2,
+// so the waveguide loss is included (with κ = 0 it is exactly a lossy waveguide of the same length).
+function braggM(lamB, Lum, kgmm, wl, g) {
+  const bB = betaOf(lamB, g), d = C(betaOf(wl, g) - bB, -alphaOf(g) / 2), k = kgmm * 1e3, L = Lum * 1e-6;
+  const gm = csqrt(add(C(k * k), neg(mul(d, d))));
+  let Cc, S;
+  if (abs2(gm) > 1e-18) { Cc = ccosh(scale(gm, L)); S = div(csinh(scale(gm, L)), gm); } else { Cc = C(1); S = C(L); }
+  const jdS = mul(C(0, 1), mul(d, S)), ph = cexp(0, -bB * L), phc = cexp(0, bB * L);
+  return [[mul(ph, add(Cc, neg(jdS))), mul(ph, scale(mul(C(0, -1), S), k))], [mul(phc, scale(mul(C(0, 1), S), k)), mul(phc, add(Cc, jdS))]];
+}
+const fwdOf = m => div(C(1), m[1][1]);
+const dclAngle = (b, wl) => Math.asin(Math.min(1, Math.max(-1, R(b.k)))) * (1 + R(b.s) / 100 * (wl - R(b.lam)));
+// symbols
+const V = (raw, base, s) => typeof raw === "string" ? `<i>${raw}</i>` : `${base}<sub>${s}</sub>`;
+const armPairS = (m, arm) => arm === 2 ? pairSym([["1", "0"], ["0", "1"]], m) : pairSym(m, [["1", "0"], ["0", "1"]]);
+const armDiagS = (f, arm) => arm === 2 ? [["1", "0"], ["0", f]] : [[f, "0"], ["0", "1"]];
+const sq = x => `${x}<sup>2</sup>`;
+const PARTS = {
+  ring: {name: "Ring resonator", short: "Ring", def: () => ({type: "ring", arm: 1, k: 0.2, L: 200, rb: 0}),
+    fields: [["k", "k", "κ ring coupling", "ringk"], ["L", "L", "ring length (µm)", "ringL"], ["rb", "rb", "backscatter r (0 = none)", "ringrb"]],
+    bi: (b, wl, g) => armPair(ringM(b, wl, g), b.arm),
+    fwd: (b, wl, g) => armDiag(ringS(R(b.k), R(b.L), wl, g, rbOf(b)).t, b.arm),
+    sym: (b, s) => { const t = `t<sub>${s}</sub>`, k = V(b.k, "κ", s), l = V(b.L, "ℓ", s), tau = `τ<sub>${s}</sub>`, bs = yHas(b.rb);
+      if (!bs) return {bi: armPairS([[t, "0"], ["0", `1/${t}`]], b.arm), fwd: armDiagS(t, b.arm),
+        defs: [`${t} = (${tau} − a·e<sup>−jβ${l}</sup>) / (1 − ${tau}·a·e<sup>−jβ${l}</sup>)`, `${tau} = √(1 − ${sq(k)})`, `a = amplitude left after one trip round (from the loss setting)`]};
+      const p = `ρ<sub>${s}</sub>`, r = V(b.rb, "r<sub>s</sub>", s);
+      return {bi: armPairS([[`(${t}${SUP2} − ${p}${SUP2})/${t}`, `${p}/${t}`], [`−${p}/${t}`, `1/${t}`]], b.arm), fwd: armDiagS(t, b.arm),
+        defs: [`${t} = (${tau} − G) / (1 − ${tau}G), ${p} = −j${sq(k)}${r}·e / ((1 − ${tau}G)·q)`, `G = t<sub>s</sub>e − ${sq(r)}${tau}e${SUP2}/q, q = 1 − ${tau}t<sub>s</sub>e, t<sub>s</sub> = √(1 − ${sq(r)})`,
+          `e = a·e<sup>−jβ${l}</sup>, one trip round; ${tau} = √(1 − ${sq(k)})`, `${r} = field reflection of a point scatterer half-way round, coupling the clockwise and counter-clockwise light; ${p} is reflected back along the waveguide, the same from either side`]}; },
+    calc: (b, g) => `${(R(b.k) ** 2 * 100).toFixed(1)}% couples into the ring · dips every ≈ ${(g.lc * g.lc / (g.ng * R(b.L) * 1000)).toFixed(3)} nm` + (rbOf(b) > 0 ? ` · each split by ≈ ${(Math.asin(rbOf(b)) / Math.PI * g.lc * g.lc / (g.ng * R(b.L) * 1000) * 1000).toFixed(2)} pm` : ""),
+    info: "A ring next to one waveguide. At its resonances light circles the ring and the output dips: the classic photonic filter. Light passes in either direction the same way, and nothing is reflected, unless you set a backscatter: then sidewall roughness, modelled as one small reflector in the ring, couples the clockwise and counter-clockwise light, each resonance splits in two, and some light comes back along the waveguide."},
+  phase: {name: "Phase shifter (heater)", short: "Phase shifter", def: () => ({type: "phase", arm: 1, th: 1.5708}),
+    fields: [["th", "th", "extra phase θ (rad)", "th"]],
+    bi: b => armPair(diag2(cexp(0, -R(b.th)), cexp(0, R(b.th))), b.arm),
+    fwd: b => armDiag(cexp(0, -R(b.th)), b.arm),
+    sym: (b, s) => { const t = V(b.th, "θ", s); return {bi: armPairS([[`e<sup>−j${t}</sup>`, "0"], ["0", `e<sup>j${t}</sup>`]], b.arm), fwd: armDiagS(`e<sup>−j${t}</sup>`, b.arm), defs: [`${t} = extra phase, the same at every wavelength`]}; },
+    calc: b => `adds ${(R(b.th) / Math.PI).toFixed(3)}π rad`,
+    info: "Adds a set phase to one waveguide, like a heater on a real chip. It doesn't change the power on its own; it moves where light goes in an interferometer."},
+  mmi: {name: "MMI 50/50 splitter", short: "MMI 50/50", def: () => ({type: "mmi", dB: 0}),
+    fields: [["dB", "dB", "extra loss (dB)", "dB"]],
+    bi: b => { const a = db2a(R(b.dB)), m = couplerCS(Math.SQRT1_2, Math.SQRT1_2); [0, 2].forEach(r => m[r] = m[r].map(z => scale(z, a))); [1, 3].forEach(r => m[r] = m[r].map(z => scale(z, 1 / a))); return m; },
+    fwd: b => { const a = db2a(R(b.dB)) * Math.SQRT1_2; return [[C(a), C(0, -a)], [C(0, -a), C(a)]]; },
+    sym: (b, s) => { const a = `a<sub>${s}</sub>`, f = `${a}/√2`, bk = `1/(√2${a})`;
+      return {bi: [[f, "0", `−j${f}`, "0"], ["0", bk, "0", `j${bk}`], [`−j${f}`, "0", f, "0"], ["0", `j${bk}`, "0", bk]], fwd: [[f, `−j${f}`], [`−j${f}`, f]],
+        defs: [`${a} = 10<sup>−loss/20</sup> (loss = ${V(b.dB, "loss", s)} dB)`, "always a 50/50 split"]}; },
+    calc: b => `always 50/50 · passes ${(db2a(R(b.dB)) ** 2 * 100).toFixed(1)}% of the power`,
+    info: "A multimode interference splitter: a wide block that always splits 50/50, whatever the wavelength. An alternative to a coupler at κ = 0.7071."},
+  dcl: {name: "Coupler that changes with λ", short: "Coupler (λ)", def: () => ({type: "dcl", k: 0.7071, lam: 1550, s: 0.3}),
+    fields: [["k", "k", "κ at the reference λ", "k0"], ["lam", "lam", "reference λ (nm)", "lam0"], ["s", "s", "strength change (%/nm)", "sdcl"]],
+    bi: (b, wl) => { const p = dclAngle(b, wl); return couplerCS(Math.cos(p), Math.sin(p)); },
+    fwd: (b, wl) => { const p = dclAngle(b, wl), c = Math.cos(p), k = Math.sin(p); return [[C(c), C(0, -k)], [C(0, -k), C(c)]]; },
+    sym: (b, s) => { const p = `p<sub>${s}</sub>`, c = `cos ${p}`, k = `sin ${p}`;
+      return {bi: [[c, "0", `−j ${k}`, "0"], ["0", c, "0", `j ${k}`], [`−j ${k}`, "0", c, "0"], ["0", `j ${k}`, "0", c]], fwd: [[c, `−j ${k}`], [`−j ${k}`, c]],
+        defs: [`${p} = arcsin(${V(b.k, "κ", s)})·(1 + ${V(b.s, "s", s)}·(λ − ${V(b.lam, "λ₀", s)})/100)`, `power crossing over = sin<sup>2</sup>${p}`]}; },
+    calc: (b, g) => `at ${fmt(g.lc)} nm: ${(Math.sin(dclAngle(b, g.lc)) ** 2 * 100).toFixed(1)}% crosses over`,
+    info: "A real coupler: the longer the wavelength, the more strongly it couples. The coupling strength grows by s % for every nm above the reference wavelength."},
+  cross: {name: "Waveguide crossing", short: "Crossing", def: () => ({type: "cross"}), fields: [],
+    bi: () => { const m = zeros(4); m[0][2] = m[1][3] = m[2][0] = m[3][1] = C(1); return m; },
+    fwd: () => [[C(0), C(1)], [C(1), C(0)]],
+    sym: () => ({bi: [["0", "0", "1", "0"], ["0", "0", "0", "1"], ["1", "0", "0", "0"], ["0", "1", "0", "0"]], fwd: [["0", "1"], ["1", "0"]], defs: ["swaps waveguide 1 and waveguide 2 (ideal, no loss)"]}),
+    calc: () => "waveguide 1 ↔ waveguide 2",
+    info: "The two waveguides cross over each other, so they swap places. Needed for bigger layouts."},
+  mirror: {name: "Partial mirror", short: "Mirror", def: () => ({type: "mirror", arm: 1, conv: "R", R: 0.3, r: 0.5477}),
+    fields: b => b.conv === "r" ? [["r", "rf", "field reflection r (−0.99 to 0.99)", "rf"]] : [["R", "R", "power reflectance R (0 to 0.99)", "R"]],
+    selects: [["conv", "set by", [["R", "power reflectance R"], ["r", "field reflection r"]], "mconv"]],
+    bi: b => armPair(mirrorOf(b), b.arm),
+    fwd: b => armDiag(C(mirrorPass(b)), b.arm),
+    sym: (b, s) => { const t = `t<sub>${s}</sub>`;
+      if (b.conv === "r") { const r = V(b.r, "r", s);
+        return {bi: armPairS([[`1/${t}`, `−${r}/${t}`], [`−${r}/${t}`, `1/${t}`]], b.arm), fwd: armDiagS(t, b.arm), defs: [`${t} = √(1 − ${sq(r)})`, `field reflection ${r} from the left, −${r} from the right; power reflectance ${sq(r)}; at every wavelength`]}; }
+      const r = V(b.R, "R", s);
+      return {bi: armPairS([[`1/${t}`, `j√${r}/${t}`], [`−j√${r}/${t}`, `1/${t}`]], b.arm), fwd: armDiagS(t, b.arm), defs: [`${t} = √(1 − ${r})`, `reflects ${r} of the power (field reflection j√${r} from either side), at every wavelength`]}; },
+    calc: b => { const P = b.conv === "r" ? R(b.r) ** 2 : R(b.R);
+      return `reflects ${(P * 100).toFixed(1)}% of the power, passes ${((1 - P) * 100).toFixed(1)}%` + (b.conv === "r" ? ` (field r = ${fmt(R(b.r))} from the left, ${String(fmt(-R(b.r))).replace("-", "−")} from the right)` : ` (field reflection j·${fmt(Math.sqrt(R(b.R)))})`); },
+    info: "A simple lossless mirror on one waveguide: reflects part of the power at every wavelength and lets the rest through. Set it by the power reflectance R (field reflection j√R from either side), or by a real field reflection coefficient r, as for a refractive-index step: r from the left, −r from the right, R = r²."},
+  bragg: {name: "Bragg grating", short: "Bragg grating", def: () => ({type: "bragg", arm: 1, lam: 1550, L: 500, kg: 2}),
+    fields: [["lam", "lam", "Bragg wavelength (nm)", "lamB"], ["L", "L", "length (µm)", "braggL"], ["kg", "kg", "strength κ (1/mm)", "kg"]],
+    bi: (b, wl, g) => armPair(braggM(R(b.lam), R(b.L), R(b.kg), wl, g), b.arm),
+    fwd: (b, wl, g) => armDiag(fwdOf(braggM(R(b.lam), R(b.L), R(b.kg), wl, g)), b.arm),
+    sym: (b, s) => { const E = x => `e<sup>${x}jβ<sub>B</sub>L</sup>`;
+      return {bi: armPairS([[`${E("−")}(C − jδS)`, `−jκ<sub>g</sub>S·${E("−")}`], [`jκ<sub>g</sub>S·${E("")}`, `${E("")}(C + jδS)`]], b.arm),
+        fwd: armDiagS(`${E("−")}/(C + jδS)`, b.arm),
+        defs: [`C = cosh γL`, `S = sinh(γL)/γ`, `γ = √(κ<sub>g</sub><sup>2</sup> − δ<sup>2</sup>)`, `δ = β(λ) − β<sub>B</sub>` + (glob().loss > 0 ? ` − jα/2 (α = the waveguide loss)` : ""), `β<sub>B</sub> = β(λ<sub>B</sub>) = π/period`, betaDef(),
+          `here λ<sub>B</sub> = ${V(b.lam, "λ<sub>B</sub>", s)}, L = ${V(b.L, "L", s)}, κ<sub>g</sub> = ${V(b.kg, "κ<sub>g</sub>", s)}`, `peak reflection tanh<sup>2</sup>(κ<sub>g</sub>L) without loss`]}; },
+    calc: (b, g) => `reflects up to ${(Math.tanh(R(b.kg) * 1e3 * R(b.L) * 1e-6) ** 2 * 100).toFixed(1)}%${g.loss > 0 ? " (less with the loss)" : ""} around ${fmt(R(b.lam))} nm`,
+    info: "A grating that reflects only a narrow band of wavelengths around its Bragg wavelength and lets the rest through. Longer or stronger = reflects more, over a narrower band."},
+  atten: {name: "Loss element", short: "Loss", def: () => ({type: "atten", arm: 1, dB: 3}),
+    fields: [["dB", "dB", "loss (dB)", "dB"]],
+    bi: b => { const a = db2a(R(b.dB)); return armPair(diag2(C(a), C(1 / a)), b.arm); },
+    fwd: b => armDiag(C(db2a(R(b.dB))), b.arm),
+    sym: (b, s) => { const a = `a<sub>${s}</sub>`; return {bi: armPairS([[a, "0"], ["0", `1/${a}`]], b.arm), fwd: armDiagS(a, b.arm), defs: [`${a} = 10<sup>−loss/20</sup> (loss = ${V(b.dB, "loss", s)} dB)`]}; },
+    calc: b => `passes ${(db2a(R(b.dB)) ** 2 * 100).toFixed(1)}% of the power`,
+    info: "Takes away a set amount of power on one waveguide: a bend, a defect, a lossy section. 3 dB = half the power."},
+  edge: {name: "Chip edge / grating coupler", short: "Chip edge", def: () => ({type: "edge", dB: 2, R: 0}),
+    fields: [["dB", "dB", "loss per waveguide (dB)", "edB"], ["R", "R", "reflection R", "eR"]],
+    bi: b => { const a = db2a(R(b.dB)), m = matmul2(diag2(C(a), C(1 / a)), mirror2(R(b.R))); return pair(m, m); },
+    fwd: b => { const f = C(db2a(R(b.dB)) * Math.sqrt(1 - R(b.R))); return diag2(f, f); },
+    sym: (b, s) => { const a = `a<sub>${s}</sub>`, t = `t<sub>${s}</sub>`, r = V(b.R, "R", s), m = [[`${a}/${t}`, `j${a}√${r}/${t}`], [`−j√${r}/(${a}${t})`, `1/(${a}${t})`]];
+      return {bi: pairSym(m, m), fwd: [[`${a}${t}`, "0"], ["0", `${a}${t}`]], defs: [`${a} = 10<sup>−loss/20</sup> (loss = ${V(b.dB, "loss", s)} dB)`, `${t} = √(1 − ${r})`, "on both waveguides; the reflection is the one seen from the left"]}; },
+    calc: b => `passes ${(db2a(R(b.dB)) ** 2 * (1 - R(b.R)) * 100).toFixed(1)}% on each waveguide${R(b.R) > 0 ? `, reflects ${(R(b.R) * 100).toFixed(1)}%` : ""}`,
+    info: "Where light gets on or off the chip (a cleaved facet or a grating coupler). Costs some power on both waveguides and can reflect a little. Put one at each end."},
+};
+// add-drop ring between the waveguides. Through t (waveguide 1), t' (waveguide 2), drop d:
+// light dropped from one waveguide leaves the other one going BACKWARDS (the drop port is on the input side).
+function addDrop(k1, k2, Lum, wl, g) {
+  if (k1 === 0 && k2 === 0) return {m: eye(4), t: C(1), tp: C(1), d: C(0)};      // the ring touches neither waveguide
+  const t1 = Math.sqrt(1 - k1 * k1), t2 = Math.sqrt(1 - k2 * k2);
+  const eh = wgGain(Lum / 2, wl, g), e = mul(eh, eh);          // half and full trip round the ring
+  const den = add(C(1), neg(scale(e, t1 * t2)));
+  const t = div(add(C(t1), neg(scale(e, t2))), den), tp = div(add(C(t2), neg(scale(e, t1))), den), d = div(scale(eh, -k1 * k2), den);
+  const d2 = mul(d, d), m = zeros(4);
+  m[0][0] = add(t, neg(div(d2, tp))); m[0][3] = div(d, tp);
+  m[1][1] = div(C(1), t); m[1][2] = neg(div(d, t));
+  m[2][1] = div(d, t); m[2][2] = add(tp, neg(div(d2, t)));
+  m[3][0] = neg(div(d, tp)); m[3][3] = div(C(1), tp);
+  return {m, t, tp, d};
+}
+// Y-splitter on (its two waveguides, its own radiation channel). Rows = right side, columns = left side.
+// Light on the waveguide that ends at the junction goes into the radiation channel (lost), and so does the
+// out-of-phase part when combining. U is real orthogonal, so the backward fields use the same U.
+// "Make room" (stem on the upper waveguide): the new branch takes the place directly below the stem and every
+// waveguide below shifts down one place (splitting) or up one place (combining). U then acts on
+// (stem, branch, the waveguides below ..., radiation channel), m entries in all; m = 3 is the plain Y.
+const roomY = b => b.type === "ysplit" && b.room === "move" && b.stem !== 2;
+function yU(b, m = 3) {
+  const h = Math.SQRT1_2, comb = b.dir === "combine";
+  if (b.stem === 2) return !comb ? [[0, h, -h], [0, h, h], [1, 0, 0]] : [[0, 0, 1], [h, h, 0], [-h, h, 0]];
+  const U = Array.from({length: m}, () => Array(m).fill(0)), last = m - 2;
+  if (!comb) { U[0][0] = U[0][m - 1] = U[1][0] = h; U[1][m - 1] = -h; for (let j = 1; j < last; j++) U[j + 1][j] = 1; U[m - 1][last] = 1; }
+  else { U[0][0] = U[0][1] = U[m - 1][0] = h; U[m - 1][1] = -h; for (let j = 1; j < last; j++) U[j][j + 1] = 1; U[last][m - 1] = 1; }
+  return U;
+}
+// Path lengths: the two branches (length Lb) and, with "make room", the waveguides that bend sideways (extra Ls).
+// The junction itself has no length. M = Pout · U · Pin, with Pin/Pout diagonal propagation factors.
+function yPaths(b, n, gb, gs, one) {
+  const pin = Array(n).fill(one), pout = Array(n).fill(one), last = n - 2;
+  if (b.dir === "combine") { pin[0] = pin[1] = gb; if (roomY(b)) for (let j = 1; j < last; j++) pout[j] = gs; }       // branches come in on the left
+  else { pout[0] = pout[1] = gb; if (roomY(b)) for (let j = 2; j <= last; j++) pout[j] = gs; }                        // branches leave on the right
+  return {pin, pout};
+}
+const yHas = (raw, need = true) => need && (typeof raw === "string" || R(raw) > 0);
+// Waveguides that step half a spacing at a junction but are not inside its matrix: those above it, and with
+// "stay in place" those below it too (with "make room" the ones below are part of the junction's matrix).
+function yStepLanes(b, at, ctx) {
+  const out = [];
+  for (let L = ctx[0]; L < at; L++) out.push(L);
+  if (!roomY(b)) for (let L = at + 2; L <= ctx[1]; L++) out.push(L);
+  return out;
+}
+function yLocal(b, n = 3, wl, g) {
+  const U = yU(b, n), fw = model === "fwd", per = fw ? 1 : 2;
+  const gb = wl && yHas(b.Lb) ? wgGain(R(b.Lb), wl, g) : C(1), gs = wl && yHas(b.Ls) ? wgGain(R(b.Ls), wl, g) : C(1);
+  const {pin, pout} = yPaths(b, n, gb, gs, C(1)), M = zeros(per * n);
+  U.forEach((row, r) => row.forEach((x, c) => {
+    if (!x) return;
+    const f = mul(pout[r], pin[c]);
+    M[per * r][per * c] = scale(f, x);                          // forward: picks up e^(−jβL)
+    if (!fw) M[2 * r + 1][2 * c + 1] = scale(div(C(1), f), x);   // backward, in transfer form: the inverse
+  }));
+  return M;
+}
+function matmul2(A, B) { return [[add(mul(A[0][0], B[0][0]), mul(A[0][1], B[1][0])), add(mul(A[0][0], B[0][1]), mul(A[0][1], B[1][1]))], [add(mul(A[1][0], B[0][0]), mul(A[1][1], B[1][0])), add(mul(A[1][0], B[0][1]), mul(A[1][1], B[1][1]))]]; }
+Object.assign(PARTS, {
+  adddrop: {name: "Add-drop ring", short: "Add-drop ring", def: () => ({type: "adddrop", k1: 0.2, k2: 0.2, L: 200}),
+    fields: [["k1", "k", "κ to waveguide 1", "adk1"], ["k2", "k", "κ to waveguide 2", "adk2"], ["L", "L", "ring length (µm)", "ringL"]],
+    bi: (b, wl, g) => addDrop(R(b.k1), R(b.k2), R(b.L), wl, g).m,
+    fwd: (b, wl, g) => { const r = addDrop(R(b.k1), R(b.k2), R(b.L), wl, g); return diag2(r.t, r.tp); },
+    sym: (b, s) => { const t = `t<sub>${s}</sub>`, tp = `t′<sub>${s}</sub>`, d = `d<sub>${s}</sub>`, k1 = V(b.k1, "κ", s + ",1"), k2 = V(b.k2, "κ", s + ",2"), l = V(b.L, "ℓ", s);
+      return {bi: [[`${t} − ${d}<sup>2</sup>/${tp}`, "0", "0", `${d}/${tp}`], ["0", `1/${t}`, `−${d}/${t}`, "0"], ["0", `${d}/${t}`, `${tp} − ${d}<sup>2</sup>/${t}`, "0"], [`−${d}/${tp}`, "0", "0", `1/${tp}`]],
+        fwd: [[t, "0"], ["0", tp]],
+        defs: [`${t} = (τ<sub>1</sub> − τ<sub>2</sub>A) / (1 − τ<sub>1</sub>τ<sub>2</sub>A)`, `${tp} = (τ<sub>2</sub> − τ<sub>1</sub>A) / (1 − τ<sub>1</sub>τ<sub>2</sub>A)`,
+          `${d} = −κ<sub>1</sub>κ<sub>2</sub>√A / (1 − τ<sub>1</sub>τ<sub>2</sub>A)`, `A = a·e<sup>−jβ${l}</sup> (one trip round the ring)`, `τ<sub>i</sub> = √(1 − κ<sub>i</sub><sup>2</sup>), κ<sub>1</sub> = ${k1}, κ<sub>2</sub> = ${k2}`,
+          "dropped light leaves the other waveguide going backwards, so Forward only can't see it"]}; },
+    calc: (b, g) => `drops between waveguides ${b.at || 1} and ${(b.at || 1) + 1} at resonances every ≈ ${(g.lc * g.lc / (g.ng * R(b.L) * 1000)).toFixed(3)} nm`,
+    info: "A ring between the two waveguides. At its resonances light jumps from one waveguide to the other through the ring (the “drop” port); off resonance it goes straight past. Dropped light travels backwards in the other waveguide, so it comes out on the input side: with input on in 1, the drop port is “In 2 · reflected”."},
+  ysplit: {name: "Y-splitter", short: "Y-splitter", def: () => ({type: "ysplit", stem: 1, dir: "split", room: "move", Lb: 0, Ls: 0}),
+    fields: [["Lb", "L", "branch length (µm)", "ybl"], ["Ls", "L", "extra length, shifted waveguides (µm)", "ysl"]],
+    selects: [["stem", "stem on", [[1, "waveguide 1"], [2, "waveguide 2"]], "ystem"], ["dir", "shape", [["split", "splits (stem on the left)"], ["combine", "combines (stem on the right)"]], "ydir"],
+      ["room", "waveguides below", [["move", "shift to make room"], ["stay", "stay in place"]], "yroom"]],
+    bi: (b, wl, g) => yLocal(b, 3, wl, g), fwd: (b, wl, g) => yLocal(b, 3, wl, g),
+    sym: (b, s, n = 3) => {
+      const name = x => x === 1 ? "" : x === -1 ? "−" : x > 0 ? "1/√2·" : "−1/√2·", hb = yHas(b.Lb), hs = yHas(b.Ls) && roomY(b);
+      const {pin, pout} = yPaths(b, n, hb ? "g<sub>b</sub>" : "", hs ? "g<sub>s</sub>" : "", ""), Uq = yU(b, n);
+      const cell = (x, a, c, inv) => { if (!x) return "0"; const f = [a, c].filter(Boolean).map(t => inv ? `${t}<sup>−1</sup>` : t).join("·"); return f ? name(x) + f : (x === 1 ? "1" : x === -1 ? "−1" : x > 0 ? "1/√2" : "−1/√2"); };
+      const U = Uq.map((row, r) => row.map((x, c) => cell(x, pout[r], pin[c], false))), m = Array.from({length: 2 * n}, () => Array(2 * n).fill("0"));
+      Uq.forEach((row, r) => row.forEach((x, c) => { m[2 * r][2 * c] = cell(x, pout[r], pin[c], false); m[2 * r + 1][2 * c + 1] = cell(x, pout[r], pin[c], true); }));
+      const lens = [...(hb ? [`g<sub>b</sub> = e<sup>−(jβ+α/2)L<sub>b</sub></sup>, branch length L<sub>b</sub> = ${V(b.Lb, "L<sub>b</sub>", s)}`] : []), ...(hs ? [`g<sub>s</sub> = e<sup>−(jβ+α/2)L<sub>s</sub></sup>, extra length of the shifted waveguides L<sub>s</sub> = ${V(b.Ls, "L<sub>s</sub>", s)}`] : [])];
+      return {bi: m, fwd: U, defs: [...lens, `r = the splitter's radiation channel: light that leaves the circuit at the junction`, b.dir === "combine" ? "out-of-phase light from the two branches goes to r" : roomY(b) ? "the waveguides below shift down one place to make room; anything on the bottom waveguide before the split goes to r" : "light arriving on the other waveguide at the stem end ends here and goes to r", ...(roomY(b) && n > 3 ? ["the 1s off the diagonal are the waveguides below shifting place"] : []), "U is orthogonal, so the backward fields use the same matrix"]}; },
+    calc: b => { const st = (b.at || 1) + (b.stem === 2 ? 1 : 0), ot = (b.at || 1) + (b.stem === 2 ? 0 : 1);
+      if (roomY(b)) return b.dir === "combine" ? `in-phase light joins waveguide ${st}; out-of-phase light is lost; the waveguides below move up one place` : `splits waveguide ${st} 50/50 into waveguides ${st} and ${st + 1}; the waveguides below move down one place`;
+      return b.dir === "combine" ? `in-phase light joins waveguide ${st}; out-of-phase light is lost (radiated); waveguide ${ot} starts here` : `splits waveguide ${st} 50/50 into waveguides ${b.at || 1} and ${(b.at || 1) + 1}; light arriving on waveguide ${ot} ends here and is lost`; },
+    info: "One waveguide branching into two. Splitting: the stem's light goes 50/50 into both branches, at every wavelength; a waveguide arriving beside the stem ends at the junction and its light is lost. Combining: light arriving in step joins the stem; light out of step is radiated away. Lost light is shown as its own output, “Lost at B…”. The junction has no length; set the branch length and the extra length of shifted waveguides to include their phase and loss."},
+});
+const ARMED = new Set(["ring", "phase", "mirror", "bragg", "atten"]);
+const isPart = b => b && (DEF[b.type] || PARTS[b.type] || (b.type === "group" && Array.isArray(b.blocks) && b.blocks.every(x => isPart(migrate(x)))));
+const nameOf = b => b.type === "group" ? `${b.name} (custom)` : b.type === "ysplit" && b.dir === "combine" ? "Y-combiner" : (NAME[b.type] || PARTS[b.type].name);
+const labelOf = b => b.type === "group" ? b.name : b.type === "ysplit" && b.dir === "combine" ? "Y-combiner" : (SHORT[b.type] || PARTS[b.type].short);
+function makeBlock(type) {
+  if (type.startsWith("custom:")) { const n = type.slice(7), c = presets.parts[n]; Object.entries(c.params || {}).forEach(([k, v]) => { if (!params[k]) params[k] = JSON.parse(JSON.stringify(v)); }); return {type: "group", name: n, n: c.n || 2, at: 1, blocks: JSON.parse(JSON.stringify(c.blocks))}; }
+  if (type === "ycomb") return {...PARTS.ysplit.def(), dir: "combine"};
+  return PARTS[type] ? PARTS[type].def() : DEF[type]();
+}
+
+// ---------- state ----------
+const DEF = {
+  coupler: () => ({type: "coupler", k: 0.5}),
+  slm1: () => ({type: "slm1", arm: 1, k: 0.3, mode: "phase", phi: 0.7, L: 50}),
+  slm2: () => ({type: "slm2", arms: [{k: 0.3, mode: "phase", phi: 0.7, L: 50}, {k: 0.2, mode: "phase", phi: 1.9, L: 50}]}),
+  wg: () => ({type: "wg", L1: 100, L2: 120}),
+};
+const NAME = {coupler: "Directional coupler", slm1: "Sagnac loop mirror (SLM)", slm2: "SLM pair", wg: "Waveguide sections"};
+const SHORT = {coupler: "Coupler", slm1: "SLM", slm2: "SLM pair", wg: "Waveguides"};
+const BUILTIN = {
+  notes: {name: "Notes: coupler → SLM pair → coupler", make: () => [{type: "coupler", k: 0.5}, DEF.slm2(), {type: "coupler", k: 0.4}]},
+  mzi: {name: "Unbalanced Mach–Zehnder", make: () => [{type: "coupler", k: 0.7071}, {type: "wg", L1: 1000, L2: 1100}, {type: "coupler", k: 0.7071}]},
+  fp: {name: "Fabry–Pérot from two SLMs", make: () => [{type: "slm1", arm: 1, k: 0.6, mode: "phase", phi: 0, L: 50}, {type: "wg", L1: 200, L2: 0}, {type: "slm1", arm: 1, k: 0.6, mode: "phase", phi: 0, L: 50}]},
+  single: {name: "A single SLM", make: () => [DEF.slm1()]},
+  ringnotch: {name: "Ring notch filter", n: 1, make: () => [{type: "ring", arm: 1, k: 0.2, L: 200}]},
+  adddrop: {name: "Add-drop channel filter", make: () => [{type: "adddrop", at: 1, k1: 0.2, k2: 0.2, L: 200}]},
+  mziswitch: {name: "MZI switch (tune the heater)", make: () => [{type: "coupler", at: 1, k: 0.7071}, {type: "phase", arm: 1, th: 0}, {type: "coupler", at: 1, k: 0.7071}]},
+  tree: {name: "1×4 splitter tree", n: 4, inp: "2", make: () => [{type: "ysplit", at: 2, stem: 1, dir: "split"}, {type: "ysplit", at: 1, stem: 2, dir: "split"}, {type: "ysplit", at: 3, stem: 1, dir: "split"}]},
+};
+const KIND = {k: {step: 0.01, min: 0, max: 1, def: 0.5}, phi: {step: 0.05, def: 0}, th: {step: 0.05, def: 0}, L: {step: 1, min: 0, def: 100},
+  R: {step: 0.01, min: 0, max: 0.99, def: 0.3}, dB: {step: 0.1, min: 0, def: 1}, lam: {step: 0.5, min: 1, def: 1550}, kg: {step: 0.1, min: 0, def: 2}, s: {step: 0.05, def: 0.3},
+  rf: {step: 0.01, min: -0.99, max: 0.99, def: 0.5}, rb: {step: 0.005, min: 0, max: 0.99, def: 0}};
+const SET_IDS = ["inp", "lc", "ls", "np", "ne", "lo", "ng", "l0"];
+const NEW_SETTINGS = {ng: "", l0: "1550"};      // added later: circuits saved before then get these
+const MAXWG = 6;
+let blocks = [], params = {}, model = "bi", tab = "out", nWG = 2, customIn = [{a: 1, ph: 0}, {a: 0, ph: 0}];
+let presets = {user: {}, hidden: [], parts: {}};
+const migrate = b => b.type === "slm" ? {type: "slm2", arms: b.arms} : b;
+let pendingInp = null;
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+(() => {
+  const s = store.get("opticsbox");
+  if (s && Array.isArray(s.blocks)) {
+    blocks = s.blocks.map(migrate); params = s.params || {}; model = s.model === "fwd" ? "fwd" : "bi"; tab = ["out", "mat", "ref", "py"].includes(s.tab) ? s.tab : "out";
+    nWG = Math.max(1, Math.min(MAXWG, s.nWG || 2)); if (Array.isArray(s.customIn)) customIn = s.customIn;
+    const st = s.settings || {};
+    if (st.inp === "both") { customIn = [{a: +st.a1 || 0, ph: 0}, {a: +st.a2 || 0, ph: +st.dp || 0}]; st.inp = "custom"; }
+    pendingInp = st.inp;
+    for (const id of SET_IDS) if (st[id] != null && id !== "inp") document.getElementById(id).value = st[id];
+  } else { const old = store.get("pcb-circuit"); if (Array.isArray(old) && old.length) blocks = old.map(migrate); }
+  const p = store.get("opticsbox-presets"); if (p) presets = {user: p.user || {}, hidden: p.hidden || [], parts: p.parts || {}};
+})();
+function save() {
+  const settings = {}; for (const id of SET_IDS) settings[id] = document.getElementById(id).value;
+  store.set("opticsbox", {blocks, params, model, tab, settings, nWG, customIn});
+  if (typeof recordHistory === "function") recordHistory();
+}
+const $ = s => document.querySelector(s);
+const num = id => parseFloat($(id).value);
+const R = v => typeof v === "number" ? v : (params[v] ? params[v].v : NaN);       // a field is a number or a parameter name
+const fmt = x => +(+x).toFixed(6);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+function glob() {      // ng: group index (blank = constant index, the same as n); l0: reference wavelength for the dispersion
+  const n = num("#ne"), disp = $("#ng").value.trim() !== "";
+  return {lc: num("#lc"), span: num("#ls"), np: Math.max(11, Math.min(20001, Math.round(num("#np")))), n, ng: disp ? num("#ng") : n, l0: num("#l0"), disp,
+    loss: Math.max(0, num("#lo") || 0), inp: $("#inp").value};
+}
+const betaDef = () => glob().disp ? `β(λ) = 2π·n<sub>eff</sub>/λ<sub>0</sub> + 2π·n<sub>g</sub>·(λ<sub>0</sub> − λ)/λ<sub>0</sub><sup>2</sup> (first-order dispersion)` : `β = 2π·n<sub>eff</sub>/λ`;
+function inputs(g) {   // field amplitudes put into the left end of each waveguide
+  const A = Array.from({length: nWG}, () => C(0));
+  if (g.inp === "custom") customIn.slice(0, nWG).forEach((c, i) => A[i] = scale(cexp(0, +c.ph || 0), +c.a || 0));
+  else if (g.inp === "all") A.fill(C(1));          // equal light, in phase, into every waveguide
+  else A[Math.min(nWG, Math.max(1, +g.inp || 1)) - 1] = C(1);
+  return A;
+}
+const powerIn = A => A.reduce((s, z) => s + abs2(z), 0) || 1;
+function drawInputs() {     // the input selector and the custom amplitude/phase fields follow the number of waveguides
+  const sel = $("#inp"), cur = pendingInp != null ? pendingInp : sel.value; pendingInp = null;
+  sel.innerHTML = Array.from({length: nWG}, (_, i) => `<option value="${i + 1}">waveguide ${i + 1}</option>`).join("") + (nWG > 1 ? `<option value="all">all</option><option value="custom">custom</option>` : "");
+  sel.value = ((cur === "custom" || cur === "all") && nWG > 1) || (+cur >= 1 && +cur <= nWG) ? cur : "1";
+  while (customIn.length < nWG) customIn.push({a: 0, ph: 0});
+  customIn.length = nWG;
+  const box = $("#custin"); box.hidden = sel.value !== "custom";
+  box.innerHTML = customIn.map((c, i) => `<label data-tipk="a1">amplitude, in ${i + 1}<input type="number" step="0.1" min="0" value="${fmt(c.a)}" data-cin="${i}" data-f="a"></label>
+    <label data-tipk="dp">phase, in ${i + 1} (rad)<input type="number" step="0.1" value="${fmt(c.ph)}" data-cin="${i}" data-f="ph"></label>`).join("");
+}
+$("#custin").addEventListener("input", e => { const el = e.target; if (el.dataset.cin == null) return; const v = parseFloat(el.value); if (!isFinite(v)) return; customIn[+el.dataset.cin][el.dataset.f] = v; scheduleUpdate(); });
+
+// ---------- waveguides (lanes) ----------
+// "one": sits on one waveguide (b.arm) · "two": joins neighbouring waveguides b.at and b.at+1 · "all": every waveguide · "group": b.n waveguides from b.at
+const TWO = new Set(["coupler", "dcl", "mmi", "cross", "adddrop", "slm2", "ysplit", "ycomb"]);
+const laneKind = t => t === "group" ? "group" : (t === "wg" || t === "edge") ? "all" : TWO.has(t) ? "two" : "one";
+const groupN = b => Math.max(1, b.n || 2);
+function lanesOf(b, N = nWG) {
+  const k = laneKind(b.type);
+  if (k === "one") return [b.arm || 1];
+  if (k === "two") return [b.at || 1, (b.at || 1) + 1];
+  if (k === "group") return Array.from({length: groupN(b)}, (_, j) => (b.at || 1) + j);
+  return Array.from({length: N}, (_, j) => j + 1);
+}
+const wgKeys = b => Object.keys(b).filter(k => /^L\d+$/.test(k)).sort((x, y) => +x.slice(1) - +y.slice(1));
+function fillDefaults(list) { for (const b of list) { if (b.type === "group") fillDefaults(b.blocks); if (b.type === "ysplit") { if (b.Lb === undefined) b.Lb = 0; if (b.Ls === undefined) b.Ls = 0; }
+  if (b.type === "ring" && b.rb === undefined) b.rb = 0;
+  if (b.type === "mirror") { if (b.conv !== "r") b.conv = "R"; if (b.r === undefined) { const R0 = R(b.R); b.r = isFinite(R0) && R0 >= 0 ? fmt(Math.sqrt(R0)) : 0.5; } if (b.R === undefined) b.R = 0.3; } } }
+const partFields = b => { const f = PARTS[b.type].fields; return typeof f === "function" ? f(b) : f; };
+function normalize() {      // keep every component on waveguides that exist
+  fillDefaults(blocks);
+  let need = 1;
+  for (const b of blocks) { const k = laneKind(b.type); if (k === "two") need = Math.max(need, 2); if (k === "group") need = Math.max(need, groupN(b)); }
+  nWG = Math.min(MAXWG, Math.max(nWG, need));
+  for (const b of blocks) {
+    const k = laneKind(b.type);
+    if (k === "one") b.arm = Math.min(nWG, Math.max(1, b.arm || 1));
+    if (k === "two") b.at = Math.min(nWG - 1, Math.max(1, b.at || 1));
+    if (k === "group") { b.n = groupN(b); b.at = Math.min(nWG - b.n + 1, Math.max(1, b.at || 1)); }
+    if (b.type === "wg") { for (let L = 1; L <= nWG; L++) if (b["L" + L] === undefined) b["L" + L] = b.L1 ?? 0; for (const key of wgKeys(b)) if (+key.slice(1) > nWG) delete b[key]; }
+  }
+}
+function addLane() {
+  if (nWG >= MAXWG) { toast(`OpticsBox supports up to ${MAXWG} waveguides.`); return false; }
+  nWG++; normalize(); return true;
+}
+function removeLane(L) {
+  const gone = []; commitHistory();
+  blocks = blocks.filter((b, i) => {
+    const k = laneKind(b.type);
+    if (k === "all") return true;
+    const ls = lanesOf(b);
+    if (ls.includes(L)) { gone.push(i); return false; }
+    return true;
+  });
+  for (const b of blocks) {
+    const k = laneKind(b.type);
+    if (k === "one" && b.arm > L) b.arm--;
+    if ((k === "two" || k === "group") && b.at > L) b.at--;
+    if (b.type === "wg") { for (let x = L; x < nWG; x++) b["L" + x] = b["L" + (x + 1)]; delete b["L" + nWG]; }
+  }
+  customIn.splice(L - 1, 1); nWG--; selected = -1;
+  normalize(); drawInputs(); changed();
+  commitHistory();
+  toast(`Removed waveguide ${L}${gone.length ? ` and ${gone.length} component${gone.length > 1 ? "s" : ""} on it` : ""}.`, 8000, "Undo", undo);
+}
+
+// fields of a block: [path, kind, symbol subscript, arm]
+function fieldsOf(b, i, pre = `${i}`) {
+  const s = i + 1;
+  if (b.type === "group") return b.blocks.flatMap((x, j) => fieldsOf(x, i, `${pre}.blocks.${j}`));
+  if (PARTS[b.type]) return partFields(b).map(([key, kind]) => [`${pre}.${key}`, kind, `${s}`]);
+  if (b.type === "coupler") return [[`${pre}.k`, "k", `${s}`]];
+  if (b.type === "wg") return wgKeys(b).map(key => [`${pre}.${key}`, "L", `${s},${key.slice(1)}`]);
+  if (b.type === "slm1") return [[`${pre}.k`, "k", `${s}`], b.mode === "loop" ? [`${pre}.L`, "L", `${s}`] : [`${pre}.phi`, "phi", `${s}`]];
+  return b.arms.flatMap((a, j) => [[`${pre}.arms.${j}.k`, "k", `${s},${j + 1}`], a.mode === "loop" ? [`${pre}.arms.${j}.L`, "L", `${s},${j + 1}`] : [`${pre}.arms.${j}.phi`, "phi", `${s},${j + 1}`]]);
+}
+function getAt(path) { let o = blocks; for (const k of path.split(".")) o = o[k]; return o; }
+function setAt(path, v) { const p = path.split("."); let o = blocks; for (let k = 0; k < p.length - 1; k++) o = o[p[k]]; o[p[p.length - 1]] = v; }
+function usedParams() { const s = new Map(); blocks.forEach((b, i) => fieldsOf(b, i).forEach(([p, kind]) => { const v = getAt(p); if (typeof v === "string") s.set(v, kind); })); return s; }
+const RESERVED = new Set("j beta w np sp T A1 A2 b1 b2 pair I2 coupler slm wg loop_phase ports outputs total build N_EFF LOSS N_G LAM0 ALPHA wl P e pi E I S N O Q lambda for in if is or and not def return phase CROSS ring mirror mirror_r bragg mmi atten coupler_wl edge lam add_drop ysplit ysplit_room place lanes N".split(" "));
+const validName = s => /^[A-Za-z_Α-ω][A-Za-z0-9_Α-ω]*$/.test(s) && !RESERVED.has(s);
+
+// ---------- numbers: matrices and outputs ----------
+function phaseOf(a, wl, g) { return a.mode === "loop" ? betaOf(wl, g) * R(a.L) * 1e-6 : R(a.phi); }
+function blockMatrix2(b, wl, g) {       // a component's matrix in the two-waveguide frame (as verified before)
+  if (PARTS[b.type]) return PARTS[b.type][model](b, wl, g);
+  if (model === "fwd") {
+    if (b.type === "coupler") return couplerF(R(b.k));
+    if (b.type === "wg") return diag2(wgGain(R(b.L1), wl, g), wgGain(R(b.L2), wl, g));
+    if (b.type === "slm2") return diag2(slmF(R(b.arms[0].k), phaseOf(b.arms[0], wl, g)), slmF(R(b.arms[1].k), phaseOf(b.arms[1], wl, g)));
+    const s = slmF(R(b.k), phaseOf(b, wl, g)); return b.arm === 2 ? diag2(C(1), s) : diag2(s, C(1));
+  }
+  if (b.type === "coupler") return coupler(R(b.k));
+  if (b.type === "wg") return pair(waveguide(R(b.L1), wl, g), waveguide(R(b.L2), wl, g));
+  if (b.type === "slm2") return pair(slm(R(b.arms[0].k), phaseOf(b.arms[0], wl, g)), slm(R(b.arms[1].k), phaseOf(b.arms[1], wl, g)));
+  const s = slm(R(b.k), phaseOf(b, wl, g)); return b.arm === 2 ? pair(eye(2), s) : pair(s, eye(2));
+}
+// Each component has a small "local" matrix on the waveguides it uses; every other waveguide passes unchanged.
+const PER = () => model === "fwd" ? 1 : 2;
+function oneLocal(m2) { return model === "fwd" ? [[m2[0][0]]] : [[m2[0][0], m2[0][1]], [m2[1][0], m2[1][1]]]; }   // waveguide-1 corner of a 2-waveguide matrix
+// The circuit flattened into placed components: custom components are opened up, and every Y-splitter gets a
+// radiation lane numbered after the real waveguides (N+1, N+2, ...). Radiation lanes carry lost light out.
+function placed(list = blocks, N = nWG) {
+  const out = []; let aux = 0;
+  const walk = (lst, base, span, top, path) => lst.forEach((b, i) => {
+    const t = top == null ? i : top, name = path ? `${path}.${i + 1}` : `${i + 1}`, k = laneKind(b.type);
+    if (k === "group") return walk(b.blocks, base + (b.at || 1) - 1, groupN(b), t, name);
+    let lanes;
+    if (k === "all") lanes = Array.from({length: span}, (_, j) => base + j + 1);
+    else if (k === "one") lanes = [base + (b.arm || 1)];
+    else lanes = [base + (b.at || 1), base + (b.at || 1) + 1];
+    if (roomY(b)) lanes = Array.from({length: base + span - lanes[0] + 1}, (_, j) => lanes[0] + j);     // stem down to the bottom
+    if (b.type === "ysplit") lanes.push(N + (++aux));
+    out.push({b, lanes, top: t, name, ctx: [base + 1, base + span]});
+  });
+  walk(list, 0, N, null, "");
+  out.nAux = aux; return out;
+}
+function itemLocals(it, wl, g) {        // [[localMatrix, lanes], ...]
+  const b = it.b, k = laneKind(b.type);
+  if (b.type === "ysplit") {      // the junction, plus the shift length on the waveguides that step aside but are not part of it
+    const res = [[yLocal(b, it.lanes.length, wl, g), it.lanes]];
+    if (yHas(b.Ls)) { const at = it.lanes[0], m = oneLocal(waveguide(R(b.Ls), wl, g));
+      for (const L of yStepLanes(b, at, it.ctx)) res.push([m, [L]]); }
+    return res;
+  }
+  if (k === "one") return [[oneLocal(blockMatrix2({...b, arm: 1}, wl, g)), it.lanes]];
+  if (k === "two") return [[blockMatrix2(b, wl, g), it.lanes]];
+  if (b.type === "wg") return it.lanes.map((L, j) => [oneLocal(blockMatrix2({type: "wg", L1: b["L" + (j + 1)] ?? 0, L2: 0}, wl, g)), [L]]);
+  const m = oneLocal(blockMatrix2(b, wl, g)); return it.lanes.map(L => [m, [L]]);
+}
+const idxOf = lanes => lanes.flatMap(L => PER() === 2 ? [2 * (L - 1), 2 * (L - 1) + 1] : [L - 1]);
+function applyIdx(T, M, ix) {           // T ← E·T, where E is the identity with M on rows/columns ix
+  const rows = ix.map((_, r) => {
+    const row = T[0].map(() => C(0));
+    ix.forEach((src, c) => { const m = M[r][c]; if (!m[0] && !m[1]) return; const sr = T[src]; for (let q = 0; q < row.length; q++) row[q] = add(row[q], mul(m, sr[q])); });
+    return row;
+  });
+  rows.forEach((row, r) => T[ix[r]] = row);
+}
+function total(wl, g, list = blocks, N = nWG) {
+  const items = placed(list, N), T = eye(PER() * (N + items.nAux));
+  for (const it of items) for (const [M, lanes] of itemLocals(it, wl, g)) applyIdx(T, M, idxOf(lanes));
+  return T;
+}
+const lostList = () => placed().filter(it => it.b.type === "ysplit").map((it, j) => ({key: "x" + (j + 1), lane: nWG + j + 1, top: it.top, name: it.name, b: it.b}));
+function blockMatrix(b, wl, g, N = nWG) { return total(wl, g, [b], N); }       // a component's full matrix (others = identity)
+function csolve(M, rhs) {               // complex Gaussian elimination with partial pivoting
+  const n = rhs.length, A = M.map((r, i) => [...r.map(z => z.slice()), rhs[i].slice()]);
+  for (let c = 0; c < n; c++) {
+    let p = c; for (let r = c + 1; r < n; r++) if (abs2(A[r][c]) > abs2(A[p][c])) p = r;
+    [A[c], A[p]] = [A[p], A[c]];
+    for (let r = 0; r < n; r++) { if (r === c) continue; const f = div(A[r][c], A[c][c]); if (!f[0] && !f[1]) continue; for (let k = c; k <= n; k++) A[r][k] = add(A[r][k], neg(mul(f, A[c][k]))); }
+  }
+  return A.map((row, i) => div(row[n], row[i]));
+}
+// outputs: oK leaves waveguide K on the right; rK comes back out of waveguide K on the left. Nothing is sent in from the right.
+function outputs(T, A) {
+  const N = T.length / PER(), res = {};
+  A = [...A]; while (A.length < N) A.push(C(0));      // nothing enters through a radiation lane
+  if (model === "fwd") { for (let i = 0; i < N; i++) { let s = C(0); for (let j = 0; j < N; j++) s = add(s, mul(T[i][j], A[j])); res["o" + (i + 1)] = s; res["r" + (i + 1)] = C(0); } Object.defineProperty(res, "_left", {value: A}); return res; }
+  const Mx = [], rhs = [];      // unknown backward fields on the left: no backward light may enter on the right
+  for (let i = 0; i < N; i++) { const r = 2 * i + 1; Mx.push(Array.from({length: N}, (_, j) => T[r][2 * j + 1])); let s = C(0); for (let j = 0; j < N; j++) s = add(s, mul(T[r][2 * j], A[j])); rhs.push(neg(s)); }
+  const bk = csolve(Mx, rhs), left = [];
+  for (let j = 0; j < N; j++) left.push(A[j], bk[j]);
+  for (let i = 0; i < N; i++) { let s = C(0); for (let j = 0; j < 2 * N; j++) s = add(s, mul(T[2 * i][j], left[j])); res["o" + (i + 1)] = s; res["r" + (i + 1)] = bk[i]; }
+  Object.defineProperty(res, "_left", {value: left});       // full field vector at the input end
+  return res;
+}
+function det(T) {
+  const n = T.length, M = T.map(r => r.map(z => z.slice())); let d = C(1);
+  for (let c = 0; c < n; c++) {
+    let piv = c; for (let r = c + 1; r < n; r++) if (abs2(M[r][c]) > abs2(M[piv][c])) piv = r;
+    if (abs2(M[piv][c]) < 1e-300) return C(0);
+    if (piv !== c) { [M[piv], M[c]] = [M[c], M[piv]]; d = neg(d); }
+    d = mul(d, M[c][c]);
+    for (let r = c + 1; r < n; r++) { const f = div(M[r][c], M[c][c]); for (let k = c; k < n; k++) M[r][k] = add(M[r][k], neg(mul(f, M[c][k]))); }
+  }
+  return d;
+}
+
+// ---------- symbols ----------
+const SUP2 = "<sup>2</sup>";
+function symOf(raw, kind, sub, loop) {
+  if (typeof raw === "string") return loop ? `β<i>${raw}</i>` : `<i>${raw}</i>`;
+  if (kind === "k") return `κ<sub>${sub}</sub>`;
+  if (kind === "phi") return `φ<sub>${sub}</sub>`;
+  return loop ? `βℓ<sub>${sub}</sub>` : `L<sub>${sub}</sub>`;
+}
+const tauOf = (raw, sub) => typeof raw === "string" ? `τ<sub>${raw}</sub>` : `τ<sub>${sub}</sub>`;
+const dOf = (raw, sub) => typeof raw === "string" ? `D<sub>${raw}</sub>` : `D<sub>${sub}</sub>`;
+function slmSym(a, sub) {      // one SLM: returns {m: 2x2 (both directions), f: forward scalar, defs}
+  const k = symOf(a.k, "k", sub), t = tauOf(a.k, sub), D = dOf(a.k, sub);
+  const ph = a.mode === "loop" ? symOf(a.L, "L", sub, true) : symOf(a.phi, "phi", sub);
+  return {m: [[`e<sup>−j${ph}</sup>/${D}`, `−2j${k}${t}/${D}`], [`2j${k}${t}/${D}`, `e<sup>j${ph}</sup>/${D}`]],
+    f: `${D}·e<sup>−j${ph}</sup>`, defs: [`${D} = 1 − 2${k}${SUP2}`, ...(model === "bi" ? [`${t} = √(1 − ${k}${SUP2})`] : [])]};
+}
+function wgSym(raw, sub) { const L = symOf(raw, "L", sub); return {f: `e<sup>−jβ${L}</sup>`, b: `e<sup>jβ${L}</sup>`}; }
+const ID2 = [["1", "0"], ["0", "1"]];
+function pairSym(a, b) { const m = Array.from({length: 4}, () => Array(4).fill("0")); for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { m[i][j] = a[i][j]; m[i + 2][j + 2] = b[i][j]; } return m; }
+function blockSym(b, i) {
+  const s = `${i + 1}`, defs = [];
+  if (b.type === "group") return {m: null, defs: [`made of: ${b.blocks.map(labelOf).join(" → ")}. Its matrix is theirs multiplied together; ungroup it to see each one.`]};
+  if (PARTS[b.type]) { const r = PARTS[b.type].sym(b, s); return {m: model === "fwd" ? r.fwd : r.bi, defs: r.defs}; }
+  if (b.type === "coupler") {
+    const k = symOf(b.k, "k", s), t = tauOf(b.k, s);
+    defs.push(`${t} = √(1 − ${k}${SUP2})`, "power crossing over = " + k + SUP2);
+    if (model === "fwd") return {m: [[t, `−j${k}`], [`−j${k}`, t]], defs};
+    return {m: [[t, "0", `−j${k}`, "0"], ["0", t, "0", `j${k}`], [`−j${k}`, "0", t, "0"], ["0", `j${k}`, "0", t]], defs};
+  }
+  if (b.type === "wg") {
+    const w1 = wgSym(b.L1, `${s},1`), w2 = wgSym(b.L2, `${s},2`);
+    defs.push(betaDef(), ...(glob().loss > 0 ? [`with loss, β → β − jα/2 (α = loss)`] : []));
+    if (model === "fwd") return {m: [[w1.f, "0"], ["0", w2.f]], defs};
+    return {m: pairSym([[w1.f, "0"], ["0", w1.b]], [[w2.f, "0"], ["0", w2.b]]), defs};
+  }
+  if (b.type === "slm1") {
+    const S = slmSym(b, s); defs.push(...S.defs); if (b.mode === "loop") defs.push(betaDef());
+    if (model === "fwd") return {m: b.arm === 2 ? [["1", "0"], ["0", S.f]] : [[S.f, "0"], ["0", "1"]], defs};
+    return {m: b.arm === 2 ? pairSym(ID2, S.m) : pairSym(S.m, ID2), defs};
+  }
+  const S1 = slmSym(b.arms[0], `${s},1`), S2 = slmSym(b.arms[1], `${s},2`);
+  defs.push(...S1.defs, ...S2.defs); if (b.arms.some(a => a.mode === "loop")) defs.push(betaDef());
+  if (model === "fwd") return {m: [[S1.f, "0"], ["0", S2.f]], defs};
+  return {m: pairSym(S1.m, S2.m), defs};
+}
+
+// ---------- block list (left column) ----------
+let selected = -1;
+function field(path, kind, label, tipk) {   // a box takes a number or a variable name; − / + and the arrow keys step it
+  const raw = getAt(path), named = typeof raw === "string", val = R(raw);
+  const bind = named ? ` data-bind="${raw}"` : "";
+  return `<label data-tipk="${tipk}">${label}${named ? ` <span class="bind">variable ${raw}</span>` : ""}<span class="fieldrow">
+    <span class="step"><button type="button" data-step="-1" data-path="${path}" data-kind="${kind}" aria-label="Decrease ${label}">−</button><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" value="${esc(named ? raw : (isFinite(val) ? fmt(val) : ""))}" data-path="${path}" data-kind="${kind}" data-ui="text" aria-label="${label} (a number, or a name to make it a variable)"><button type="button" data-step="1" data-path="${path}" data-kind="${kind}" aria-label="Increase ${label}">+</button></span>
+    ${kind === "k" || kind === "R" ? `<input type="range" min="0" max="${KIND[kind].max}" step="0.001" value="${isFinite(val) ? val : 0}" data-path="${path}" data-ui="range"${bind} aria-label="${label} slider">` : ""}</span></label>`;
+}
+function stepField(path, kind, dir) {
+  const raw = getAt(path), K = KIND[kind], v0 = R(raw);
+  let v = +((isFinite(v0) ? v0 : K.def) + dir * K.step).toFixed(6);
+  if (K.min != null) v = Math.max(K.min, v); if (K.max != null) v = Math.min(K.max, v);
+  if (typeof raw === "string") params[raw].v = v; else setAt(path, v);
+  document.querySelectorAll(typeof raw === "string" ? `[data-bind="${raw}"]` : `[data-path="${path}"]`).forEach(el => {
+    if (el.dataset.ui === "range" || el.dataset.ui === "num") el.value = v; else if (el.dataset.ui === "text" && typeof raw !== "string") el.value = fmt(v);
+  });
+  scheduleUpdate();
+}
+function phaseFields(a, base, sub) {
+  return `<label data-tipk="mode">phase set by<select data-path="${base}.mode" data-ui="sel"><option value="phase" ${a.mode === "phase" ? "selected" : ""}>phase φ</option><option value="loop" ${a.mode === "loop" ? "selected" : ""}>loop length</option></select></label>
+    ${a.mode === "loop" ? field(`${base}.L`, "L", "loop length (µm)", "loopL") : field(`${base}.phi`, "phi", "φ (rad)", "phi")}`;
+}
+const laneOpts = (cur, n = nWG) => Array.from({length: n}, (_, k) => `<option value="${k + 1}" ${cur === k + 1 ? "selected" : ""}>waveguide ${k + 1}</option>`).join("");
+function laneSelect(b, i) {     // where the component sits
+  const k = laneKind(b.type);
+  if (k === "one") return `<label data-tipk="armsel">sits on<select data-path="${i}.arm" data-ui="selnum">${laneOpts(b.arm || 1)}</select></label>`;
+  if (k === "two" && nWG > 2) return `<label data-tipk="atsel">connects<select data-path="${i}.at" data-ui="selnum">${Array.from({length: nWG - 1}, (_, a) => `<option value="${a + 1}" ${(b.at || 1) === a + 1 ? "selected" : ""}>waveguides ${a + 1} & ${a + 2}</option>`).join("")}</select></label>`;
+  if (k === "group" && nWG > groupN(b)) return `<label data-tipk="atsel">starts at<select data-path="${i}.at" data-ui="selnum">${laneOpts(b.at || 1, nWG - groupN(b) + 1)}</select></label>`;
+  return "";
+}
+function cardHTML(b, i, inEditor) {
+  let body = "";
+  const ls = laneSelect(b, i);
+  if (b.type === "group") body = `<div class="arm">${ls}<span class="calc">${b.blocks.map(labelOf).join(" → ")}</span><button data-ungroup="${i}" data-tipk="ungroup">Ungroup to edit</button></div>`;
+  else if (PARTS[b.type]) body = partRail(b, i);
+  else if (b.type === "coupler") body = `<div class="arm">${ls}${field(`${i}.k`, "k", "κ coupling", "k")}<span class="calc" data-calc="${i}"></span></div>`;
+  else if (b.type === "wg") body = `<div class="arm">${wgKeys(b).map(key => field(`${i}.${key}`, "L", `length, waveguide ${key.slice(1)} (µm)`, "L")).join("")}<span class="calc" data-calc="${i}"></span></div>`;
+  else if (b.type === "slm1") body = `<div class="arm">${ls}
+      ${field(`${i}.k`, "k", "κ (its coupler)", "slmk")}${phaseFields(b, `${i}`)}<span class="calc" data-calc="${i}"></span></div>`;
+  else body = (ls ? `<div class="arm">${ls}</div>` : "") + b.arms.map((a, j) => `<div class="arm"><span class="tag">On waveguide ${(b.at || 1) + j}</span>
+      ${field(`${i}.arms.${j}.k`, "k", "κ (its coupler)", "slmk")}${phaseFields(a, `${i}.arms.${j}`)}</div>`).join("") + `<span class="calc" data-calc="${i}"></span>`;
+  return `<div class="block ${i === selected ? "sel" : ""}" data-card="${i}"><div class="bhead"><span class="n">B${i + 1}</span><b data-pick="${i}" data-tipk="name-${b.type}">${esc(nameOf(b))}</b>
+    <button class="icon" data-mv="${i}" data-d="-1" aria-label="Move earlier" ${i ? "" : "disabled"}>↑</button>
+    <button class="icon" data-mv="${i}" data-d="1" aria-label="Move later" ${i < blocks.length - 1 ? "" : "disabled"}>↓</button>
+    <button class="icon" data-dup="${i}" aria-label="Duplicate">⧉</button>
+    <button class="icon" data-del="${i}" aria-label="Remove">✕</button>
+    ${inEditor ? `<button class="icon" data-close aria-label="Close the editor">Close</button>` : ""}</div>${body}</div>`;
+}
+function wireCard(root) {
+  root.querySelectorAll("[data-mv]").forEach(b => b.onclick = () => { const i = +b.dataset.mv, j = i + +b.dataset.d; [blocks[i], blocks[j]] = [blocks[j], blocks[i]]; selected = j; changed(); });
+  root.querySelectorAll("[data-dup]").forEach(b => b.onclick = () => { const i = +b.dataset.dup; blocks.splice(i + 1, 0, JSON.parse(JSON.stringify(blocks[i]))); selected = i + 1; changed(); });
+  root.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { blocks.splice(+b.dataset.del, 1); selected = -1; changed(); });
+  root.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => select(+b.dataset.pick));
+  root.querySelectorAll("[data-ungroup]").forEach(b => b.onclick = () => { const i = +b.dataset.ungroup; blocks.splice(i, 1, ...blocks[i].blocks); selected = -1; changed(); });
+  root.querySelectorAll("[data-close]").forEach(b => b.onclick = () => select(-1));
+}
+function drawRail() {
+  const rail = $("#rail");
+  rail.innerHTML = `<div class="port">input</div>` + blocks.map((b, i) => cardHTML(b, i, false)).join("") +
+    (blocks.length ? "" : `<p class="note">No components. Drag one onto the circuit, or click it to append it.</p>`) + `<div class="port">output</div>`;
+  wireCard(rail);
+  drawEditor();
+}
+function drawEditor() {     // the selected part's settings, right under the drawing
+  const ed = $("#editor");
+  if (selected < 0 || selected >= blocks.length) { ed.hidden = true; ed.innerHTML = ""; return; }
+  ed.hidden = false; ed.innerHTML = cardHTML(blocks[selected], selected, true); wireCard(ed);
+}
+function partRail(b, i) {
+  const arm = laneSelect(b, i), at = b.at || 1;
+  const sels = (PARTS[b.type].selects || []).map(([key, label, opts, tipk]) => `<label data-tipk="${tipk}">${label}<select data-path="${i}.${key}" data-ui="${typeof opts[0][0] === "number" ? "selnum" : "sel"}">${opts.map(([v, t]) => `<option value="${v}" ${b[key] === v ? "selected" : ""}>${key === "stem" ? `waveguide ${at + v - 1}` : t}</option>`).join("")}</select></label>`).join("");
+  return `<div class="arm">${arm}${sels}${partFields(b).map(([key, kind, label, tipk]) => field(`${i}.${key}`, kind, label, tipk)).join("")}<span class="calc" data-calc="${i}"></span></div>`;
+}
+function changed() { drawRail(); drawParams(); update(); }
+function syncBound(src) {   // keep every input showing the same value in step
+  const sel = src.dataset.bind ? `[data-bind="${src.dataset.bind}"]` : `[data-path="${src.dataset.path}"]:not([data-bind])`;
+  document.querySelectorAll(sel).forEach(el => { if (el !== src && (el.dataset.ui === "num" || el.dataset.ui === "range")) el.value = src.value; });
+}
+function onFieldInput(e) {
+  const el = e.target, ui = el.dataset.ui;
+  if (ui === "text") {   // live update while typing a number; names are taken when you leave the box
+    const t = el.value.trim();
+    if (t === "" || !isFinite(+t)) return;
+    el.classList.remove("bad"); setAt(el.dataset.path, +t);
+    document.querySelectorAll(`[data-path="${el.dataset.path}"]`).forEach(r => { if (r !== el && (r.dataset.ui === "range" || r.dataset.ui === "text")) r.value = r.dataset.ui === "text" ? t : +t; });
+    scheduleUpdate(); return;
+  }
+  if (ui !== "num" && ui !== "range") return;
+  const v = parseFloat(el.value);
+  if (!isFinite(v)) { el.classList.add("bad"); return; }
+  el.classList.remove("bad");
+  if (el.dataset.bind) params[el.dataset.bind].v = v; else setAt(el.dataset.path, v);
+  syncBound(el);
+  if (!el.dataset.bind) document.querySelectorAll(`[data-path="${el.dataset.path}"][data-ui="text"]`).forEach(t => t.value = fmt(v));
+  scheduleUpdate();
+}
+function onFieldChange(e) {
+  const el = e.target, ui = el.dataset.ui;
+  if (ui === "sel") {
+    setAt(el.dataset.path, el.value);
+    const host = getAt(el.dataset.path.split(".").slice(0, -1).join("."));
+    if (el.dataset.path.endsWith(".room") && el.value === "move" && host && roomY(host) && host.dir !== "combine") { addLane(); drawInputs(); }
+    changed(); return;
+  }
+  if (ui === "selnum") { setAt(el.dataset.path, +el.value); changed(); return; }
+  if (ui !== "text") return;
+  const s = el.value.trim(), kind = el.dataset.kind, before = getAt(el.dataset.path);
+  if (s !== "" && isFinite(+s)) { setAt(el.dataset.path, +s); changed(); return; }
+  if (!validName(s)) { el.classList.add("bad"); $("#err").textContent = `“${s}” can't be a parameter name. Use letters, digits and _ (start with a letter), for example k, phi_a or L2.`; return; }
+  if (!params[s]) { const v0 = R(before), K = KIND[kind]; params[s] = {v: isFinite(v0) ? v0 : K.def, kind, min: K.min ?? (kind === "phi" ? 0 : 0), max: K.max ?? (kind === "phi" ? 6.2832 : Math.max(200, 2 * (isFinite(v0) ? v0 : 100)))}; }
+  setAt(el.dataset.path, s); changed();
+}
+for (const box of [$("#rail"), $("#editor")]) {
+  box.addEventListener("input", onFieldInput);
+  box.addEventListener("change", onFieldChange);
+  box.addEventListener("click", e => { const b = e.target.closest("[data-step]"); if (b) { e.preventDefault(); stepField(b.dataset.path, b.dataset.kind, +b.dataset.step); } });
+  box.addEventListener("keydown", e => {
+    const el = e.target; if (el.dataset.ui !== "text" || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault(); stepField(el.dataset.path, el.dataset.kind, e.key === "ArrowUp" ? 1 : -1);
+  });
+}
+
+// ---------- named parameters ----------
+function drawParams() {
+  const used = usedParams(), box = $("#params");
+  if (!used.size) {
+    box.innerHTML = `<p class="note">Enter a name (for example <code>k</code>) instead of a number in any field to create a shared parameter. All fields with the same name stay equal, and the parameter gets a slider here.</p>`;
+    return;
+  }
+  box.innerHTML = `<div class="ptable">` + [...used].map(([name, kind]) => {
+    const p = params[name] || (params[name] = {v: KIND[kind].def, kind, min: 0, max: kind === "k" ? 1 : kind === "phi" ? 6.2832 : 200});
+    const step = KIND[p.kind || kind].step;
+    return `<div class="prow"><span class="pn">${name}</span>
+      <input type="number" step="${step}" value="${fmt(p.v)}" data-bind="${name}" data-ui="num" aria-label="${name} value">
+      <input type="range" min="${p.min}" max="${p.max}" step="${(p.max - p.min) / 1000}" value="${p.v}" data-bind="${name}" data-ui="range" aria-label="${name} slider">
+      <label style="flex-direction:row;align-items:center;gap:4px" data-tipk="prange">from<input class="mm" type="number" value="${fmt(p.min)}" data-pmin="${name}"></label>
+      <label style="flex-direction:row;align-items:center;gap:4px">to<input class="mm" type="number" value="${fmt(p.max)}" data-pmax="${name}"></label>
+      <button class="link" data-unlink="${name}" data-tipk="unlink">use plain number</button></div>`;
+  }).join("") + `</div>`;
+  box.querySelectorAll("[data-pmin],[data-pmax]").forEach(el => el.onchange = () => {
+    const n = el.dataset.pmin || el.dataset.pmax, v = parseFloat(el.value); if (!isFinite(v)) return;
+    params[n][el.dataset.pmin ? "min" : "max"] = v; drawParams(); save();
+  });
+  box.querySelectorAll("[data-unlink]").forEach(b => b.onclick = () => {
+    const n = b.dataset.unlink, v = params[n].v;
+    blocks.forEach((bl, i) => fieldsOf(bl, i).forEach(([p]) => { if (getAt(p) === n) setAt(p, v); }));
+    changed();
+  });
+}
+$("#params").addEventListener("input", e => { if (e.target.dataset.bind) onFieldInput(e); });
+
+// ---------- presets ----------
+function drawPresets() {
+  const sel = $("#preset"), b = Object.entries(BUILTIN).filter(([id]) => !presets.hidden.includes(id)), u = Object.keys(presets.user);
+  sel.innerHTML = `<option value="">Load a preset…</option>` + b.map(([id, p]) => `<option value="b:${id}">${esc(p.name)}</option>`).join("") +
+    (u.length ? `<optgroup label="Saved by you">${u.map(n => `<option value="u:${esc(n)}">${esc(n)}</option>`).join("")}</optgroup>` : "");
+  $("#plist").innerHTML = (b.map(([id, p]) => `<div><span>${esc(p.name)}</span><button class="icon" data-pdel="b:${id}" aria-label="Remove preset ${esc(p.name)}">✕</button></div>`).join("") +
+    u.map(n => `<div><span>${esc(n)} <span class="note">· saved preset</span></span><button class="icon" data-pdel="u:${esc(n)}" aria-label="Remove preset ${esc(n)}">✕</button></div>`).join("") +
+    Object.keys(presets.parts).map(n => `<div><span>${esc(n)} <span class="note">· custom component</span></span><button class="icon" data-pdel="p:${esc(n)}" aria-label="Remove component ${esc(n)}">✕</button></div>`).join("")) || `<p class="note">No presets.</p>`;
+  $("#prestore").hidden = !presets.hidden.length;
+  $("#plist").querySelectorAll("[data-pdel]").forEach(btn => btn.onclick = () => {
+    const [t, id] = [btn.dataset.pdel.slice(0, 1), btn.dataset.pdel.slice(2)];
+    if (t === "b") presets.hidden.push(id); else if (t === "p") delete presets.parts[id]; else delete presets.user[id];
+    store.set("opticsbox-presets", presets); drawPresets(); drawMyParts();
+  });
+}
+$("#preset").onchange = e => {
+  const v = e.target.value; e.target.value = "";
+  if (v.startsWith("b:")) { const B = BUILTIN[v.slice(2)]; blocks = B.make(); nWG = B.n || 2; if (B.inp) pendingInp = B.inp; }
+  else if (v.startsWith("u:")) { const p = presets.user[v.slice(2)]; blocks = JSON.parse(JSON.stringify(p.blocks)); nWG = p.n || 2; Object.assign(params, JSON.parse(JSON.stringify(p.params || {}))); }
+  else return;
+  selected = -1; normalize(); drawInputs(); changed();
+};
+$("#pmanage").onclick = () => { const open = $("#ppanel").hidden; $("#ppanel").hidden = !open; $("#pmanage").setAttribute("aria-pressed", open); };
+$("#psave").onclick = () => {
+  const n = $("#pname").value.trim(); if (!n) { $("#pname").focus(); return; }
+  const used = {}; for (const k of usedParams().keys()) used[k] = params[k];
+  presets.user[n] = {blocks: JSON.parse(JSON.stringify(blocks)), params: used, n: nWG};
+  store.set("opticsbox-presets", presets); $("#pname").value = ""; drawPresets();
+};
+$("#ppart").onclick = () => {
+  const n = $("#pname").value.trim(); if (!n) { $("#pname").focus(); return; }
+  if (!blocks.length) return;
+  const used = {}; for (const k of usedParams().keys()) used[k] = params[k];
+  presets.parts[n] = {blocks: JSON.parse(JSON.stringify(blocks)), params: used, n: nWG};
+  store.set("opticsbox-presets", presets); $("#pname").value = ""; drawPresets(); drawMyParts();
+  toast(`Saved “${n}” as a custom component. It is now in the component palette.`);
+};
+$("#prestore").onclick = () => { presets.hidden = []; store.set("opticsbox-presets", presets); drawPresets(); };
+
+// ---------- share ----------
+// Share always works for someone without OpticsBox:
+//  · on a public website: a link that opens straight onto this circuit
+//  · anywhere else (claude.ai, a file on disk): a single OpticsBox file with this circuit inside; it opens in any browser
+function toCode() {
+  const used = {}; for (const k of usedParams().keys()) used[k] = params[k];
+  const settings = {}; for (const id of SET_IDS) settings[id] = document.getElementById(id).value;
+  return "OBX1:" + btoa(unescape(encodeURIComponent(JSON.stringify({blocks, params: used, model, settings, nWG, customIn}))));
+}
+function applyCode(code) {
+  const d = JSON.parse(decodeURIComponent(escape(atob(code.slice(5)))));
+  if (!Array.isArray(d.blocks) || !d.blocks.every(b => isPart(migrate(b)))) throw new Error("not a circuit");
+  blocks = d.blocks.map(migrate); Object.assign(params, d.params || {}); model = d.model === "fwd" ? "fwd" : "bi";
+  nWG = Math.max(1, Math.min(MAXWG, d.nWG || 2)); if (Array.isArray(d.customIn)) customIn = d.customIn;
+  const st = d.settings || {};
+  if (st.inp === "both") { customIn = [{a: +st.a1 || 0, ph: 0}, {a: +st.a2 || 0, ph: +st.dp || 0}]; st.inp = "custom"; }
+  pendingInp = st.inp;
+  for (const id of SET_IDS) if (id !== "inp") { const v = st[id] != null ? st[id] : NEW_SETTINGS[id]; if (v != null) document.getElementById(id).value = v; }
+}
+let toastTimer = null;
+function toast(msg, ms = 6000, action, fn) {
+  let t = $(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, ms);
+  if (action) { const b = document.createElement("button"); b.textContent = action; b.onclick = () => { t.hidden = true; fn(); }; t.appendChild(b); }
+}
+const onWebsite = (() => { try { return window.top === window && /^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname); } catch (e) { return false; } })();
+function standaloneFile(code) {
+  const d = PAGE.cloneNode(true), main = d.querySelector("#obx-main"), s = document.createElement("script");
+  s.textContent = `window.OBX_START = ${JSON.stringify(code)};`;
+  main.parentNode.insertBefore(s, main);
+  return "<!doctype html>\n" + d.outerHTML;
+}
+$("#sharebtn").onclick = async () => {
+  const code = toCode();
+  if (onWebsite) {
+    const url = location.origin + location.pathname + "#c=" + encodeURIComponent(code);
+    try { if (navigator.share) { await navigator.share({title: "OpticsBox circuit", url}); return; } } catch (e) { if (e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(url); toast("Link copied. Anyone who opens it sees this circuit, with nothing to install."); }
+    catch (e) { prompt("Copy this link:", url); }
+    return;
+  }
+  const html = standaloneFile(code), name = "OpticsBox circuit.html";
+  const done = "Saved “OpticsBox circuit.html”. The file contains this circuit and opens in any web browser, offline, with no installation.";
+  const dl = await downloadsP;
+  if (dl) {
+    try { await dl.save({filename: name, data: html}); toast(done, 9000); }
+    catch (e) { if (e && e.code !== "declined") toast("Couldn't save the file here. Try again in a moment."); }
+    return;
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], {type: "text/html"})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(done, 9000);
+};
+// opening a shared link or file: load its circuit (once; after that your own edits are kept)
+(() => {
+  const fromHash = location.hash.startsWith("#c=") ? decodeURIComponent(location.hash.slice(3)) : null;
+  const code = fromHash || window.OBX_START;
+  if (!code) return;
+  const seen = store.get("opticsbox-opened");
+  if (!fromHash && seen === code) return;
+  try { applyCode(code); store.set("opticsbox-opened", code); if (fromHash) history.replaceState(null, "", location.pathname + location.search); }
+  catch (e) { /* a damaged link: just open normally */ }
+})();
+
+// ---------- reset ----------
+const DEFAULTS = {inp: "1", lc: "1550", ls: "10", np: "2001", ne: "2.4", lo: "0", ...NEW_SETTINGS};
+function openResetConfirm(open) {
+  $("#resetconfirm").hidden = !open; $("#resetbtn").setAttribute("aria-expanded", open);
+  if (open) $("#rc-no").focus(); else $("#resetbtn").focus();
+}
+$("#resetbtn").onclick = () => openResetConfirm($("#resetconfirm").hidden);
+$("#rc-no").onclick = () => openResetConfirm(false);
+$("#resetconfirm").addEventListener("keydown", e => { if (e.key === "Escape") openResetConfirm(false); });
+$("#rc-yes").onclick = () => {
+  openResetConfirm(false); commitHistory();
+  blocks = []; params = {}; nWG = 2; customIn = [{a: 1, ph: 0}, {a: 0, ph: 0}]; model = "bi"; selected = -1; shown = {};
+  for (const id of SET_IDS) if (id !== "inp") document.getElementById(id).value = DEFAULTS[id];
+  pendingInp = DEFAULTS.inp;
+  drawInputs(); drawToggles(); changed(); commitHistory();
+  toast("Circuit and settings reset.", 8000, "Undo", undo);
+};
+
+// ---------- undo / redo ----------
+// Every change is recorded. Changes that follow each other quickly (dragging a slider, stretching a waveguide) count as one step.
+let past = [], future = [], lastSnap = null, burst = false, burstTimer = null, restoring = false;
+function snapshot() {
+  const settings = {}; for (const id of SET_IDS) settings[id] = document.getElementById(id).value;
+  return JSON.stringify({blocks, params, nWG, customIn, model, settings});
+}
+function recordHistory() {      // called on every save
+  if (restoring) return;
+  const cur = snapshot();
+  if (lastSnap === null || cur === lastSnap) { lastSnap = cur; return; }
+  if (!burst) { past.push(lastSnap); if (past.length > 200) past.shift(); future = []; }
+  burst = true; clearTimeout(burstTimer); burstTimer = setTimeout(() => burst = false, 700);
+  lastSnap = cur; drawUndo();
+}
+function commitHistory() { burst = false; clearTimeout(burstTimer); }     // end the current step now
+function restore(snap) {
+  const s0 = JSON.parse(snap);
+  restoring = true;
+  blocks = s0.blocks; params = s0.params; nWG = s0.nWG; customIn = s0.customIn; model = s0.model; shown = {};
+  if (selected >= blocks.length) selected = -1;
+  for (const id of SET_IDS) if (id !== "inp") document.getElementById(id).value = s0.settings[id] ?? NEW_SETTINGS[id] ?? "";
+  pendingInp = s0.settings.inp;
+  drawInputs(); drawToggles(); changed();
+  restoring = false; lastSnap = snapshot(); commitHistory(); drawUndo();
+}
+function undo() { if (!past.length) return; commitHistory(); future.push(snapshot()); restore(past.pop()); }
+function redo() { if (!future.length) return; commitHistory(); past.push(snapshot()); restore(future.pop()); }
+function drawUndo() { $("#undobtn").disabled = !past.length; $("#redobtn").disabled = !future.length; }
+$("#undobtn").onclick = undo;
+$("#redobtn").onclick = redo;
+document.addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const t = e.target, typing = t && (t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && !["range", "checkbox"].includes(t.type)));
+  if (typing) return;           // inside a text box, the browser's own undo applies
+  const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
+});
+
+// ---------- the circuit drawing ----------
+let layout = [];
+const TOP = 84, GAP = 90, LEAD = 104;
+const LY = L => TOP + (L - 1) * GAP;               // y of waveguide L
+let Y1 = LY(1), Y2 = LY(2), SVGH = LY(2) + 92;      // Y1/Y2: the two waveguides a component is drawn between
+// At a Y-junction the stem runs straight and its branches open by half a spacing each way, so every other
+// waveguide shifts by half a spacing too (spacing stays even). segOff[i] = vertical shift before component i.
+let segOff = [0], topPad = 0;
+function layoutOffsets() {
+  const o = [0]; let off = 0;
+  blocks.forEach(b => { if (b.type === "ysplit") off += (b.dir === "combine" ? 1 : -1) * (b.stem === 2 ? -1 : 1) * GAP / 2; o.push(off); });
+  segOff = o; topPad = Math.max(0, -Math.min(...o));
+}
+const yAt = (L, seg) => LY(L) + (segOff[Math.max(0, Math.min(seg, segOff.length - 1))] || 0) + topPad;
+const f2 = v => isFinite(v) ? (+v).toFixed(2).replace(/\.?0+$/, "") : "?";
+function blockWidth(b) {
+  if (b.type === "group" || b.type === "ysplit") return 150;
+  if (b.type !== "wg") return 128;
+  return Math.round(100 + Math.min(130, 34 * Math.log10(1 + Math.max(0, ...wgKeys(b).map(k => R(b[k]) || 0)))));
+}
+function wgPath(d) { return `<path class="core" d="${d}"/><path class="flow" d="${d}"/>`; }
+const nm = (raw, v) => typeof raw === "string" ? `${raw}=${f2(v)}` : f2(v);
+function loopSvg(a, w, y, up) {
+  if (!(R(a.k) > 0)) return "";
+  const cy = y + up * 26;
+  const ph = a.mode === "loop" ? `ℓ ${nm(a.L, R(a.L))}µm` : `φ ${nm(a.phi, R(a.phi))}`;
+  return `<circle class="core" cx="${w / 2}" cy="${cy}" r="22"/><circle class="flow" cx="${w / 2}" cy="${cy}" r="22"/>
+    <text class="lbl" x="${w / 2}" y="${cy + up * 36 + (up > 0 ? 4 : 0)}" text-anchor="middle">κ ${nm(a.k, R(a.k))} · ${ph}</text>`;
+}
+function laneAlive() {      // how many waveguides exist before each component (the extra ones start at a "make room" split)
+  const splits = blocks.filter(b => roomY(b) && b.dir !== "combine").length;
+  let c = nWG - splits; const out = [Math.max(1, c)];
+  blocks.forEach(b => { if (roomY(b)) c += b.dir === "combine" ? -1 : 1; out.push(Math.min(nWG, Math.max(1, c))); });
+  return out;
+}
+function svgBlock(b, i, w) {    // draw the component between its waveguides; the other waveguides run straight past
+  const k = laneKind(b.type), N = nWG; let lo, hi, bb = b;
+  if (k === "one") { const L = b.arm || 1; if (N === 1) { lo = hi = 1; bb = {...b, arm: 1}; } else if (L === 1) { lo = 1; hi = 2; bb = {...b, arm: 1}; } else { lo = L - 1; hi = L; bb = {...b, arm: 2}; } }
+  else if (k === "two") { lo = b.at || 1; hi = lo + 1; }
+  else if (k === "group") { lo = b.at || 1; hi = lo + groupN(b) - 1; }
+  else { lo = 1; hi = N; }
+  Y1 = yAt(lo, i); Y2 = yAt(hi, i);
+  let g;
+  if (b.type === "ysplit") g = drawY(b, i, w);
+  else {
+    g = b.type === "wg" ? wgSvg(b, i, w) : innerSvg(bb, i, w);
+    const alive = laneAlive(), line = L => L > alive[i] && L > alive[i + 1] ? `<path class="rad" d="M0 ${yAt(L, i)} H${w}"/>` : wgPath(`M0 ${yAt(L, i)} H${w}`);
+    if (b.type !== "wg") for (let L = 1; L <= N; L++) if (L !== lo && L !== hi) g += line(L);     // waveguide sections draw every waveguide themselves
+  }
+  return `<g class="sb ${i === selected ? "sel" : ""}" data-bi="${i}" data-tipk="sblock"><rect class="hit" x="2" y="4" width="${w - 4}" height="${SVGH - 8}" rx="8"/>
+    <text class="bn" x="8" y="${SVGH - 12}">B${i + 1}</text>${g}</g>`;
+}
+function drawY(b, i, w) {      // Y-junction: straight stem into a coupling region, branches opening symmetrically
+  const N = nWG, at = b.at || 1, comb = b.dir === "combine", room = roomY(b), st2 = b.stem === 2, X = f => w * f;
+  const yl = L => yAt(L, i), yr = L => yAt(L, i + 1), alive = laneAlive(), other = st2 ? at : at + 1, stem = st2 ? at + 1 : at;
+  const curve = (L, R) => {          // a waveguide that passes the junction, moving with the layout
+    const y1 = yl(L), y2 = yr(R), d = Math.abs(y1 - y2) < .5 ? `M0 ${y1} H${w}` : `M0 ${y1} H${X(.06)} C${X(.4)} ${y1} ${X(.6)} ${y2} ${X(.94)} ${y2} H${w}`;
+    return L > alive[i] && R > alive[i + 1] ? `<path class="rad" d="${d}"/>` : wgPath(d);
+  };
+  const box = (x0, y) => `<rect class="yzone" x="${x0}" y="${y - 17}" width="${X(.32)}" height="34" rx="5"/>`;
+  let g = "", sy, jx;
+  if (!comb) {
+    sy = yl(stem); jx = X(.46);
+    const a = yr(at), c = yr(at + 1);
+    g += box(X(.3), sy) + wgPath(`M0 ${sy} H${jx}`) +
+      wgPath(`M${jx} ${sy} C${X(.64)} ${sy} ${X(.66)} ${a} ${X(.86)} ${a} H${w}`) +
+      wgPath(`M${jx} ${sy} C${X(.64)} ${sy} ${X(.66)} ${c} ${X(.86)} ${c} H${w}`);
+    for (let L = 1; L <= N; L++) {
+      if (L === stem) continue;
+      if (L === other && !room) { g += `<path class="rad" d="M0 ${yl(L)} H${X(.28)}"/>`; continue; }      // ends at the junction
+      const R = L < at ? L : room ? L + 1 : L;
+      if (R <= N) g += curve(L, R);
+    }
+  } else {
+    sy = yr(stem); jx = X(.54);
+    const a = yl(at), c = yl(at + 1);
+    g += box(X(.38), sy) +
+      wgPath(`M0 ${a} H${X(.14)} C${X(.34)} ${a} ${X(.36)} ${sy} ${jx} ${sy}`) +
+      wgPath(`M0 ${c} H${X(.14)} C${X(.34)} ${c} ${X(.36)} ${sy} ${jx} ${sy}`) + wgPath(`M${jx} ${sy} H${w}`);
+    for (let L = 1; L <= N; L++) {
+      if (L === at || L === at + 1) continue;
+      g += curve(L, L < at ? L : room ? L - 1 : L);
+    }
+    if (!room) g += `<path class="rad" d="M${X(.72)} ${yr(other)} H${w}"/>`;      // a new waveguide starts here
+  }
+  g += `<text class="lbl" x="${comb ? X(.76) : X(.24)}" y="${sy - 24}" text-anchor="middle">${comb ? "combines" : "splits 50/50"}</text>`;
+  if (lastPorts) {
+    const x = lostList().find(v => v.top === i && v.name === `${i + 1}`), P = x ? abs2(lastPorts.p[x.key]) / lastPorts.Pin : 0;
+    if (x && (P > 1e-6 || !room)) g += `<text class="pvs" data-tipk="port" data-port="${x.key}" x="${jx}" y="${sy + 32}" text-anchor="middle">lost ${P < 1e-9 ? "0%" : pct(P)}</text>`;
+  }
+  return g;
+}
+function wgSvg(b, i, w) {      // waveguide sections: a bump shows the extra length on each waveguide
+  const keys = Array.from({length: nWG}, (_, k) => "L" + (k + 1)), Ls = keys.map(key => R(b[key] ?? 0)), mn = Math.min(...Ls), mx = Math.max(...Ls, 1e-9);
+  let g = "";
+  keys.forEach((key, k) => {
+    const L = k + 1, y = yAt(L, i), dl = Ls[k] - mn, h = dl > 0 ? Math.min(30, 6 + 24 * dl / mx) : 0, up = L === 1 && nWG > 1 ? -1 : 1, yb = y + up * h;
+    g += wgPath(h ? `M0 ${y} H${w * .22} C${w * .34} ${y} ${w * .34} ${yb} ${w / 2} ${yb} C${w * .66} ${yb} ${w * .66} ${y} ${w * .78} ${y} H${w}` : `M0 ${y} H${w}`);
+    g += `<text class="lbl" x="${w / 2}" y="${up < 0 ? y - h - 10 : y + h + 18}" text-anchor="middle">${nm(b[key], Ls[k])} µm</text>`;
+    g += `<g class="grip" data-grip="${i}" data-key="${key}" data-tipk="grip"><circle cx="${w - 12}" cy="${y}" r="8"/><path d="M${w - 16} ${y} h8 M${w - 14} ${y - 2} l-2 2 l2 2 M${w - 10} ${y - 2} l2 2 l-2 2"/></g>`;
+  });
+  return g;
+}
+function innerSvg(b, i, w) {
+  let g = "";
+  if (b.type === "group") g = groupSvg(b, w);
+  else if (PARTS[b.type]) g = partSvg(b, w);
+  else if (b.type === "coupler") {
+    const a = Y1 + 26, c = Y2 - 26, k = R(b.k);
+    g += `<rect class="zone" x="${w / 2 - 26}" y="${a - 6}" width="52" height="${c - a + 12}" rx="6"/>`;
+    g += wgPath(`M0 ${Y1} H24 C40 ${Y1} 40 ${a} 56 ${a} H${w - 56} C${w - 40} ${a} ${w - 40} ${Y1} ${w - 24} ${Y1} H${w}`);
+    g += wgPath(`M0 ${Y2} H24 C40 ${Y2} 40 ${c} 56 ${c} H${w - 56} C${w - 40} ${c} ${w - 40} ${Y2} ${w - 24} ${Y2} H${w}`);
+    g += `<text class="lbl" x="${w / 2}" y="${Y2 + 46}" text-anchor="middle">κ ${nm(b.k, k)} · ${isFinite(k) ? (k * k * 100).toFixed(0) : "?"}% over</text>`;
+  } else if (b.type === "slm2" || b.type === "slm1") {
+    const arms = b.type === "slm2" ? b.arms : (b.arm === 2 ? [{k: 0}, b] : [b, {k: 0}]);
+    arms.forEach((a, j) => { const y = j ? Y2 : Y1; g += wgPath(`M0 ${y} H${w}`) + loopSvg(a, w, y, j ? 1 : -1); });
+  } else {
+    const L1 = R(b.L1), L2 = R(b.L2), m = Math.max(L1, L2, 1e-9), dl = L2 - L1;
+    const bump = (y, h) => `M0 ${y} H${w * .22} C${w * .34} ${y} ${w * .34} ${y + h} ${w / 2} ${y + h} C${w * .66} ${y + h} ${w * .66} ${y} ${w * .78} ${y} H${w}`;
+    const h = Math.min(30, 6 + 24 * Math.abs(dl) / m);
+    g += wgPath(dl < 0 ? bump(Y1, -h) : `M0 ${Y1} H${w}`);
+    g += wgPath(dl > 0 ? bump(Y2, h) : `M0 ${Y2} H${w}`);
+    g += `<text class="lbl" x="${w / 2}" y="${Y1 - (dl < 0 ? h + 10 : 12)}" text-anchor="middle">${nm(b.L1, L1)} µm</text>`;
+    g += `<text class="lbl" x="${w / 2}" y="${Y2 + (dl > 0 ? h + 18 : 20)}" text-anchor="middle">${nm(b.L2, L2)} µm</text>`;
+    const grip = (y, key) => `<g class="grip" data-grip="${i}" data-key="${key}" data-tipk="grip"><circle cx="${w - 12}" cy="${y}" r="8"/><path d="M${w - 16} ${y} h8 M${w - 14} ${y - 2} l-2 2 l2 2 M${w - 10} ${y - 2} l2 2 l-2 2"/></g>`;
+    g += grip(Y1, "L1") + grip(Y2, "L2");
+  }
+  return g;
+}
+function partSvg(b, w) {
+  const straight = wgPath(`M0 ${Y1} H${w}`) + wgPath(`M0 ${Y2} H${w}`), c = w / 2;
+  const yA = b.arm === 2 ? Y2 : Y1, out = b.arm === 2 ? 1 : -1;            // the waveguide it sits on, and "away from the middle"
+  const lbl = (txt, y) => `<text class="lbl" x="${c}" y="${y}" text-anchor="middle">${txt}</text>`;
+  const lblA = txt => lbl(txt, yA + out * (out > 0 ? 34 : 26));
+  const t = b.type;
+  if (t === "ring") {
+    const cy = yA + out * 27;
+    return straight + `<rect class="core" x="${c - 28}" y="${cy - 17}" width="56" height="34" rx="17"/><rect class="flow" x="${c - 28}" y="${cy - 17}" width="56" height="34" rx="17"/>` +
+      lbl(`κ ${nm(b.k, R(b.k))} · ℓ ${nm(b.L, R(b.L))}µm`, cy + out * 30 + (out > 0 ? 6 : 0));
+  }
+  if (t === "phase") return straight + `<rect class="heater" x="${c - 22}" y="${yA - 9}" width="44" height="18" rx="3"/>` + lblA(`θ ${nm(b.th, R(b.th))} rad`);
+  if (t === "mirror") return straight + `<rect class="mirror" x="${c - 3}" y="${yA - 16}" width="6" height="32" rx="2"/>` + lblA(`R ${typeof b.R === "string" ? b.R + "=" : ""}${(R(b.R) * 100).toFixed(0)}%`);
+  if (t === "bragg") { let teeth = ""; for (let k = 0; k < 9; k++) teeth += `<rect class="tooth" x="${c - 34 + k * 8}" y="${yA - 8}" width="4" height="16"/>`;
+    return straight + teeth + lblA(`λ<tspan font-size="9">B</tspan> ${nm(b.lam, R(b.lam))} · ${nm(b.L, R(b.L))}µm`); }
+  if (t === "atten") return wgPath(b.arm === 2 ? `M0 ${Y1} H${w}` : `M0 ${Y2} H${w}`) +
+    wgPath(`M0 ${yA} H${c - 20} L${c - 15} ${yA - 8} L${c - 7} ${yA + 8} L${c + 1} ${yA - 8} L${c + 9} ${yA + 8} L${c + 15} ${yA} H${w}`) + lblA(`−${nm(b.dB, R(b.dB))} dB`);
+  if (t === "mmi") return wgPath(`M0 ${Y1} H${c - 34} M${c + 34} ${Y1} H${w}`) + wgPath(`M0 ${Y2} H${c - 34} M${c + 34} ${Y2} H${w}`) +
+    `<rect class="mmi" x="${c - 34}" y="${Y1 - 14}" width="68" height="${Y2 - Y1 + 28}" rx="4"/>` + lbl("50/50", (Y1 + Y2) / 2 + 4) + lbl(R(b.dB) > 0 ? `−${nm(b.dB, R(b.dB))} dB` : "MMI", Y2 + 46);
+  if (t === "cross") return wgPath(`M0 ${Y1} H${w * .2} C${w * .4} ${Y1} ${w * .6} ${Y2} ${w * .8} ${Y2} H${w}`) + wgPath(`M0 ${Y2} H${w * .2} C${w * .4} ${Y2} ${w * .6} ${Y1} ${w * .8} ${Y1} H${w}`) + lbl("swap", Y2 + 46);
+  if (t === "edge") return straight + `<line class="edgel" x1="${c}" x2="${c}" y1="${Y1 - 34}" y2="${Y2 + 30}"/>` + lbl(`−${nm(b.dB, R(b.dB))} dB${R(b.R) > 0 ? ` · R ${(R(b.R) * 100).toFixed(0)}%` : ""}`, Y2 + 46);
+  if (t === "adddrop") { const r = (Y2 - Y1) / 2 - 7, cy = (Y1 + Y2) / 2;
+    return straight + `<circle class="core" cx="${c}" cy="${cy}" r="${r}"/><circle class="flow" cx="${c}" cy="${cy}" r="${r}"/>` +
+      lbl(`κ ${nm(b.k1, R(b.k1))} / ${nm(b.k2, R(b.k2))} · ℓ ${nm(b.L, R(b.L))}µm`, Y2 + 46); }
+  if (t === "ysplit") {      // like a real Y-junction: the stem sits halfway between its branches, in a coupling region
+    const sy = b.stem === 2 ? Y2 : Y1, oy = b.stem === 2 ? Y1 : Y2, mid = (Y1 + Y2) / 2, room = roomY(b), X = f => w * f;
+    const top = lbl(b.dir === "combine" ? "combines" : "splits 50/50", Y1 - 18);
+    if (b.dir === "combine")
+      return `<rect class="yzone" x="${X(.38)}" y="${mid - 17}" width="${X(.32)}" height="34" rx="5"/>` +
+        wgPath(`M0 ${Y1} H${X(.16)} C${X(.34)} ${Y1} ${X(.38)} ${mid} ${X(.54)} ${mid}`) +
+        wgPath(`M0 ${Y2} H${X(.16)} C${X(.34)} ${Y2} ${X(.38)} ${mid} ${X(.54)} ${mid}`) +
+        wgPath(`M${X(.54)} ${mid} H${X(.7)} C${X(.82)} ${mid} ${X(.82)} ${sy} ${X(.94)} ${sy} H${w}`) +
+        (room ? "" : `<path class="rad" d="M${X(.72)} ${oy} H${w}"/>`) + top;
+    return `<rect class="yzone" x="${X(.3)}" y="${mid - 17}" width="${X(.32)}" height="34" rx="5"/>` +
+      wgPath(`M0 ${sy} H${X(.06)} C${X(.18)} ${sy} ${X(.18)} ${mid} ${X(.3)} ${mid} H${X(.46)}`) +
+      wgPath(`M${X(.46)} ${mid} C${X(.62)} ${mid} ${X(.66)} ${Y1} ${X(.84)} ${Y1} H${w}`) +
+      wgPath(`M${X(.46)} ${mid} C${X(.62)} ${mid} ${X(.66)} ${Y2} ${X(.84)} ${Y2} H${w}`) +
+      (room ? "" : `<path class="rad" d="M0 ${oy} H${X(.28)}"/>`) + top;
+  }
+  if (t === "dcl") { const a = Y1 + 26, cc = Y2 - 26;
+    return `<rect class="zone" x="${c - 26}" y="${a - 6}" width="52" height="${cc - a + 12}" rx="6"/>` +
+      wgPath(`M0 ${Y1} H24 C40 ${Y1} 40 ${a} 56 ${a} H${w - 56} C${w - 40} ${a} ${w - 40} ${Y1} ${w - 24} ${Y1} H${w}`) +
+      wgPath(`M0 ${Y2} H24 C40 ${Y2} 40 ${cc} 56 ${cc} H${w - 56} C${w - 40} ${cc} ${w - 40} ${Y2} ${w - 24} ${Y2} H${w}`) + lbl(`κ(λ) ${nm(b.k, R(b.k))} · ${nm(b.s, R(b.s))}%/nm`, Y2 + 46); }
+  return straight;
+}
+function groupSvg(b, w) {
+  return wgPath(`M0 ${Y1} H${w}`) + wgPath(`M0 ${Y2} H${w}`) + `<rect class="grp" x="8" y="${Y1 - 22}" width="${w - 16}" height="${Y2 - Y1 + 44}" rx="8"/>` +
+    `<text class="gname" x="${w / 2}" y="${(Y1 + Y2) / 2 + 4}" text-anchor="middle">${esc(b.name.length > 16 ? b.name.slice(0, 15) + "…" : b.name)}</text>` +
+    `<text class="lbl" x="${w / 2}" y="${Y2 + 46}" text-anchor="middle">${b.blocks.length} parts</text>`;
+}
+function drawSchematic() {
+  const svg = $("#sch"), g = glob(), N = nWG;
+  layoutOffsets();
+  SVGH = Math.max(...segOff.map((_, k) => yAt(N, k))) + 92;
+  let x = LEAD, body = "";
+  layout = [];
+  blocks.forEach((b, i) => { const w = blockWidth(b); layout.push({x0: x, x1: x + w}); body += `<g transform="translate(${x} 0)">${svgBlock(b, i, w)}</g>`; x += w; });
+  const W = Math.max(x + LEAD, 440);
+  const n = blocks.length, alive = laneAlive(), lead = (x0, x1, live, seg) => Array.from({length: N}, (_, k) => k + 1 > live ? `<path class="rad" d="M${x0} ${yAt(k + 1, seg)} H${x1}"/>` : wgPath(`M${x0} ${yAt(k + 1, seg)} H${x1}`)).join("");
+  const A = inputs(g);
+  let ports = "";
+  for (let L = 1; L <= N; L++) {
+    const yi = yAt(L, 0), yo = yAt(L, n), li = L === 1 ? yi - 12 : yi + 22, lo_ = L === 1 ? yo - 12 : yo + 22, lit = abs2(A[L - 1]) > 0 ? "lit" : "", ly = li;
+    ports += `<text class="portl ${lit}" x="6" y="${li}">${lit ? "▶ " : ""}in ${L}</text><text class="portl" x="${W - 6}" y="${lo_}" text-anchor="end">out ${L}</text>`;
+    if (N > 1) ports += `<text class="lanex" data-lane="${L}" data-tipk="lanex" x="${lit ? 56 : 44}" y="${ly}">✕</text>`;
+  }
+  svg.setAttribute("width", W); svg.setAttribute("height", SVGH); svg.setAttribute("viewBox", `0 0 ${W} ${SVGH}`);
+  svg.classList.toggle("fwd", model === "fwd");
+  svg.innerHTML = lead(0, LEAD, alive[0], 0) + body + lead(x, W, alive[n], n) + ports + portBadges(W) +
+    (blocks.length ? "" : `<text class="empty" x="${W / 2}" y="${(yAt(1, 0) + yAt(N, 0)) / 2 + 4}" text-anchor="middle">Drag components onto the circuit</text>`) +
+    `<line class="ins" id="ins" x1="0" x2="0" y1="10" y2="${SVGH - 10}" visibility="hidden"/><rect class="armhl" id="armhl" x="0" width="${W}" y="0" height="0" rx="8" visibility="hidden"/>`;
+  svg.querySelectorAll(".sb").forEach(el => el.addEventListener("pointerdown", e => beginDrag(e, {from: "block", index: +el.dataset.bi})));
+  svg.querySelectorAll(".grip").forEach(el => el.addEventListener("pointerdown", e => beginStretch(e, +el.dataset.grip, el.dataset.key)));
+  svg.querySelectorAll(".lanex").forEach(el => el.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); hideTip(); removeLane(+el.dataset.lane); }));
+  drawProbe();
+}
+function portBadges(W) {   // what comes out of each port, written right at that port in its chart colour
+  if (!lastPorts) return "";
+  const {p, Pin} = lastPorts;
+  const P = k => abs2(p[k]) / Pin;
+  const pct = k => P(k) < 1e-24 ? "0%" : P(k) >= 0.0995 ? (P(k) * 100).toFixed(1) + "%" : (P(k) * 100).toFixed(2) + "%";
+  const db = k => P(k) < 1e-24 ? "−∞ dB" : (10 * Math.log10(P(k))).toFixed(2) + " dB";
+  const tag = (k, x, y, anchor, label) => `<g data-tipk="port" data-port="${k}"><text class="pv" x="${x}" y="${y}" text-anchor="${anchor}" fill="var(--c-${k})">${label}${pct(k)}</text>
+    <text class="pvs" x="${x}" y="${y + 14}" text-anchor="${anchor}">${db(k)}</text></g>`;
+  let h = "";
+  for (let L = 1; L <= nWG; L++) {
+    const yo = yAt(L, blocks.length), yi = yAt(L, 0), to = L === 1 ? yo - 44 : yo + 40, ti = L === 1 ? yi - 44 : yi + 40;
+    h += tag("o" + L, W - 6, to, "end", "") + `<circle cx="${W - 3}" cy="${yo}" r="4" fill="var(--c-o${L})"/>`;
+    if (model === "bi") h += tag("r" + L, 6, ti, "start", "◀ refl. ");
+  }
+  return h;
+}
+function select(i) {
+  selected = i;
+  drawSchematic(); drawEditor();
+  document.querySelectorAll("[data-card]").forEach(c => c.classList.toggle("sel", +c.dataset.card === i));
+  document.querySelectorAll("[data-mcard]").forEach(c => c.classList.toggle("sel", +c.dataset.mcard === i));
+}
+
+// ---------- probe: light in every waveguide at any point along the circuit ----------
+let probeOn = false, probeIdx = null, probePinned = false;
+const probeXs = () => [layout.length ? layout[0].x0 : LEAD, ...layout.map(l => l.x1)];     // x of each gap: before B1, after B1, ...
+const pct = v => v < 1e-9 ? "0%" : (v * 100).toFixed(v >= 0.0995 ? 1 : 2) + "%";
+function probeAt(idx) {          // fraction of the input power travelling each way in each waveguide, after the first idx components
+  const g = glob(), A = inputs(g), o = outputs(total(g.lc, g), A), left = o._left, items = placed(), P = eye(PER() * (nWG + items.nAux)), Pin = powerIn(A);
+  for (const it of items) if (it.top < idx) for (const [M, lanes] of itemLocals(it, g.lc, g)) applyIdx(P, M, idxOf(lanes));
+  const v = P.map(row => row.reduce((acc, z, j) => add(acc, mul(z, left[j] || C(0))), C(0)));
+  return Array.from({length: nWG}, (_, k) => model === "fwd" ? {f: abs2(v[k]) / Pin, b: 0} : {f: abs2(v[2 * k]) / Pin, b: abs2(v[2 * k + 1]) / Pin});
+}
+function drawProbe() {
+  const svg = $("#sch"); svg.querySelector("#probe")?.remove(); svg.classList.toggle("probing", probeOn);
+  if (!probeOn || probeIdx == null || !lastPorts || drag || stretch) return;
+  const xs = probeXs(), idx = Math.min(probeIdx, xs.length - 1), x = xs[idx], vals = probeAt(idx);
+  const flip = x > (+svg.getAttribute("width") || 0) - 170, tx = flip ? x - 6 : x + 6, anc = flip ? "end" : "start";
+  let h = `<g id="probe" pointer-events="none"><line class="probe-line" x1="${x}" x2="${x}" y1="8" y2="${SVGH - 26}"/>
+    <text class="probe-head" x="${tx}" y="20" text-anchor="${anc}">${idx === 0 ? "at the input" : idx >= blocks.length ? "at the output" : `between B${idx} and B${idx + 1}`}${probePinned ? " · pinned" : ""}</text>`;
+  vals.forEach((v, k) => { h += `<text class="probe-lbl" x="${tx}" y="${yAt(k + 1, idx) - 8}" text-anchor="${anc}">→ ${pct(v.f)}${model === "bi" ? `   ← ${pct(v.b)}` : ""}</text>`; });
+  svg.insertAdjacentHTML("beforeend", h + "</g>");
+}
+function probeFromPointer(e) {
+  const xs = probeXs(), x = e.clientX - $("#sch").getBoundingClientRect().left;
+  let best = 0; xs.forEach((v, k) => { if (Math.abs(v - x) < Math.abs(xs[best] - x)) best = k; });
+  return best;
+}
+$("#probebtn").onclick = () => { probeOn = !probeOn; probePinned = false; probeIdx = probeOn ? blocks.length : null; $("#probebtn").setAttribute("aria-pressed", probeOn); drawProbe();
+  if (probeOn) toast("Probe on: move over the circuit to see the light in each waveguide at that point (→ forward, ← backward). Click to pin it.", 7000); };
+$("#sch").addEventListener("pointermove", e => { if (!probeOn || probePinned || drag || stretch) return; const k = probeFromPointer(e); if (k !== probeIdx) { probeIdx = k; drawProbe(); } });
+$("#sch").addEventListener("click", e => { if (!probeOn || e.target.closest(".grip, .lanex")) return; probeIdx = probeFromPointer(e); probePinned = !probePinned; drawProbe(); });
+
+// ---------- stretching waveguides ----------
+let stretch = null;
+function beginStretch(e, i, key) {
+  if (e.button > 0) return;
+  e.preventDefault(); e.stopPropagation(); hideTip();
+  const raw = blocks[i][key];
+  stretch = {i, key, x: e.clientX, L: R(raw), name: typeof raw === "string" ? raw : null};
+  selected = i;
+  window.addEventListener("pointermove", onStretch);
+  window.addEventListener("pointerup", endStretch, {once: true});
+  window.addEventListener("pointercancel", endStretch, {once: true});
+}
+function onStretch(e) {
+  const s = stretch; if (!s) return;
+  const dx = e.clientX - s.x, per = Math.max(0.2, Math.abs(s.L) / 400) * (e.shiftKey ? 0.05 : 1);
+  const L = Math.max(0, Math.round((s.L + dx * per) * 10) / 10);
+  if (s.name) params[s.name].v = L; else blocks[s.i][s.key] = L;
+  const sel = s.name ? `[data-bind="${s.name}"]` : `[data-path="${s.i}.${s.key}"]`;
+  document.querySelectorAll(sel).forEach(el => { if (el.dataset.ui !== "text" || !s.name) el.value = fmt(L); });
+  scheduleUpdate();
+}
+function endStretch() { window.removeEventListener("pointermove", onStretch); stretch = null; changed(); }
+
+// ---------- drag and drop (mouse, pen and touch) ----------
+let drag = null, ghost = null;
+function beginDrag(e, src) {
+  if (e.button > 0) return;
+  e.preventDefault(); hideTip();
+  drag = {src, sx: e.clientX, sy: e.clientY, started: false, idx: null};
+  window.addEventListener("pointermove", onDragMove);
+  window.addEventListener("pointerup", onDragEnd, {once: true});
+  window.addEventListener("pointercancel", onDragEnd, {once: true});
+}
+function insertIndex(clientX, clientY) {
+  const wrap = $("#svgwrap").getBoundingClientRect();
+  if (clientY < wrap.top - 30 || clientY > wrap.bottom + 30 || clientX < wrap.left || clientX > wrap.right) return null;
+  const sx = clientX - $("#sch").getBoundingClientRect().left;
+  let idx = 0;
+  layout.forEach((l, i) => { if (sx > (l.x0 + l.x1) / 2) idx = i + 1; });
+  return idx;
+}
+function dragType(src) { return src.from === "palette" ? src.type : blocks[src.index].type; }
+function dragSpan(src) { return src.from === "palette" ? (src.type.startsWith("custom:") ? (presets.parts[src.type.slice(7)].n || 2) : 2) : groupN(blocks[src.index]); }
+function laneAt(clientY, kind, n, seg = 0) {     // first waveguide a dropped component should use, from the pointer height
+  const y = clientY - $("#sch").getBoundingClientRect().top, u = (y - yAt(1, seg)) / GAP;     // u = 0 at waveguide 1
+  if (kind === "one") return Math.min(nWG, Math.max(1, Math.round(u) + 1));
+  if (kind === "two") return Math.min(Math.max(1, nWG - 1), Math.max(1, Math.round(u + 0.5)));
+  return Math.min(Math.max(1, nWG - n + 1), Math.max(1, Math.round(u + 1 - (n - 1) / 2)));
+}
+const roomAdd = b => { if (roomY(b) && b.dir !== "combine") addLane(); };     // a split that makes room needs one more waveguide
+const dragKind = src => { const t = dragType(src); return t === "lane" ? "lane" : t.startsWith("custom:") ? "group" : laneKind(t); };
+function onDragMove(e) {
+  if (!drag) return;
+  if (!drag.started) {
+    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+    drag.started = true;
+    ghost = document.createElement("div"); ghost.className = "ghost";
+    ghost.textContent = drag.src.from === "palette" ? `+ ${drag.src.type === "lane" ? "Waveguide" : drag.src.type.startsWith("custom:") ? drag.src.type.slice(7) : (drag.src.type === "ycomb" ? "Y-combiner" : SHORT[drag.src.type] || PARTS[drag.src.type].short)}` : `B${drag.src.index + 1} · ${labelOf(blocks[drag.src.index])}`;
+    drag.base = ghost.textContent;
+    document.body.appendChild(ghost);
+  }
+  ghost.style.left = e.clientX + "px"; ghost.style.top = e.clientY + "px";
+  drag.idx = insertIndex(e.clientX, e.clientY);
+  const ins = $("#ins"), hl = $("#armhl"), kind = dragKind(drag.src);
+  if (drag.idx == null) { ins.setAttribute("visibility", "hidden"); hl.setAttribute("visibility", "hidden"); return; }
+  if (kind === "lane") { ghost.textContent = `${drag.base} → added below waveguide ${nWG}`; hl.setAttribute("visibility", "hidden"); ins.setAttribute("visibility", "hidden"); return; }
+  if (kind !== "all" && !(kind === "two" && nWG < 2)) {   // show which waveguide(s) it will land on
+    const n = kind === "one" ? 1 : kind === "two" ? 2 : dragSpan(drag.src);
+    drag.lane = laneAt(e.clientY, kind, n, drag.idx);
+    const last = Math.min(nWG, drag.lane + n - 1);
+    hl.setAttribute("y", yAt(drag.lane, drag.idx) - 14); hl.setAttribute("height", yAt(last, drag.idx) - yAt(drag.lane, drag.idx) + 28); hl.setAttribute("visibility", "visible");
+    ghost.textContent = `${drag.base} → ${n === 1 ? `waveguide ${drag.lane}` : `waveguides ${drag.lane}–${last}`}`;
+  }
+  const x = layout.length ? (drag.idx < layout.length ? layout[drag.idx].x0 : layout[layout.length - 1].x1) : LEAD;
+  ins.setAttribute("x1", x); ins.setAttribute("x2", x); ins.setAttribute("visibility", "visible");
+  const wrap = $("#svgwrap"), r = wrap.getBoundingClientRect();
+  if (e.clientX > r.right - 40) wrap.scrollLeft += 12; else if (e.clientX < r.left + 40) wrap.scrollLeft -= 12;
+}
+function onDragEnd() {
+  window.removeEventListener("pointermove", onDragMove);
+  const d = drag; drag = null;
+  if (ghost) { ghost.remove(); ghost = null; }
+  if (!d) return;
+  const kind = dragKind(d.src);
+  if (kind === "lane") { if ((d.started ? d.idx != null : true) && addLane()) { drawInputs(); changed(); } else drawSchematic(); return; }
+  const setLane = b => { if (d.lane == null) return; if (kind === "one") b.arm = d.lane; else if (kind === "two" || kind === "group") b.at = d.lane; };
+  if (!d.started) {
+    if (d.src.from === "palette") { const nb = makeBlock(d.src.type); blocks.push(nb); roomAdd(nb); selected = blocks.length - 1; normalize(); drawInputs(); changed(); }
+    else select(d.src.index);
+    return;
+  }
+  if (d.idx == null) { drawSchematic(); return; }
+  if (d.src.from === "palette") { const nb = makeBlock(d.src.type); setLane(nb); blocks.splice(d.idx, 0, nb); roomAdd(nb); selected = d.idx; }
+  else { const from = d.src.index, [b] = blocks.splice(from, 1), to = d.idx > from ? d.idx - 1 : d.idx; setLane(b); blocks.splice(to, 0, b); selected = to; }
+  normalize(); drawInputs(); changed();
+}
+$("#palette").addEventListener("pointerdown", e => { const c = e.target.closest("[data-add]"); if (c) beginDrag(e, {from: "palette", type: c.dataset.add}); });
+$("#palette").addEventListener("keydown", e => { const c = e.target.closest("[data-add]");
+  if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); if (c.dataset.add === "lane") { if (addLane()) { drawInputs(); changed(); } return; } const nb = makeBlock(c.dataset.add); blocks.push(nb); roomAdd(nb); selected = blocks.length - 1; normalize(); drawInputs(); changed(); } });
+function drawMyParts() {
+  $("#myparts").innerHTML = Object.keys(presets.parts).map(n => `<button class="chip mine" data-add="custom:${esc(n)}" data-tipk="mypart" aria-label="Add custom component ${esc(n)}"><svg viewBox="0 0 28 18"><rect x="2" y="2" width="24" height="14" rx="3" stroke-dasharray="3 2"/></svg>${esc(n)}</button>`).join("");
+}
+
+// ---------- top toggles ----------
+function drawToggles() {
+  document.querySelectorAll("[data-model]").forEach(b => b.setAttribute("aria-pressed", b.dataset.model === model));
+  document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  document.querySelectorAll("[data-pane]").forEach(p => p.hidden = p.dataset.pane !== tab);
+  $("#custin").hidden = $("#inp").value !== "custom";
+}
+document.querySelectorAll("[data-model]").forEach(b => b.onclick = () => { model = b.dataset.model; drawToggles(); changed(); });
+document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; drawToggles(); update(); });
+SET_IDS.forEach(id => document.getElementById(id).addEventListener("input", () => { drawToggles(); if (id === "inp") { shown = {}; drawSchematic(); } scheduleUpdate(); }));
+$("#pykind").onchange = () => drawPython(glob());
+$("#refq").addEventListener("input", () => { refPage = 0; drawReference(); });
+
+// ---------- compute + draw ----------
+let sweepData = null, pending = false, lastPorts = null;
+function scheduleUpdate() {   // once per frame; the timer covers background tabs where frames pause
+  if (pending) return; pending = true;
+  const run = () => { if (!pending) return; pending = false; update(); };
+  requestAnimationFrame(run); setTimeout(run, 50);
+}
+function validate() {
+  for (const [i, b] of blocks.entries()) for (const [p, kind] of fieldsOf(b, i)) {
+    const raw = getAt(p), v = R(raw);
+    if (!isFinite(v)) return `B${i + 1}: ${typeof raw === "string" ? `parameter “${raw}” has no value` : "a field is empty"}.`;
+    if (kind === "k" && (v < 0 || v > 1)) return `B${i + 1}: κ must be between 0 and 1.`;
+    if (kind === "L" && v < 0) return `B${i + 1}: lengths can't be negative.`;
+    if (kind === "R" && (v < 0 || v > 0.99)) return `B${i + 1}: R must be between 0 and 0.99 (R = 1 would be a perfect mirror that lets nothing through).`;
+    if (kind === "rf" && Math.abs(v) > 0.99) return `B${i + 1}: the field reflection r must be between −0.99 and 0.99 (|r| = 1 would be a perfect mirror that lets nothing through).`;
+    if (kind === "rb" && (v < 0 || v > 0.99)) return `B${i + 1}: the backscatter r must be between 0 and 0.99.`;
+    if (kind === "dB" && v < 0) return `B${i + 1}: loss can't be negative.`;
+    if ((kind === "lam" || kind === "kg") && !(v > 0 || (kind === "kg" && v === 0))) return `B${i + 1}: this has to be above 0.`;
+    const host = getAt(p.split(".").slice(0, -1).join(".")), isSlm = host.type === "slm1" || /\.arms\.\d+\.k$/.test(p);
+    if (model === "bi" && kind === "k" && isSlm && Math.abs(v * v - 0.5) < 1e-9)
+      return `B${i + 1}: an SLM with κ² = 0.5 (κ ≈ 0.7071) is a perfect mirror. No light gets through, so it has no transfer matrix. Use a value slightly off 0.7071, or switch to Forward only.`;
+  }
+  return "";
+}
+function seriesInfo(g) {
+  const fw = model === "fwd", inL = /^\d+$/.test(g.inp) ? +g.inp : 0, out = [], back = [], lost = lostList().map(x => [x.key, `Lost at B${x.name} (Y-splitter)`, "--muted"]);
+  for (let L = 1; L <= nWG; L++) {
+    out.push(["o" + L, `Out ${L}` + (inL === L ? " · through" : inL && nWG === 2 ? " · cross" : ""), `--c-o${L}`]);
+    if (!fw) back.push(["r" + L, `In ${L} · reflected`, `--c-r${L}`]);
+  }
+  return [...out, ...back, ...lost];
+}
+function addLost(p) {      // power leaving through each Y-splitter's radiation lane, both ways
+  for (const x of lostList()) p[x.key] = C(Math.sqrt(abs2(p["o" + x.lane] || C(0)) + abs2(p["r" + x.lane] || C(0))));
+  return p;
+}
+let shown = {};
+const isShown = (k, g) => k in shown ? shown[k] : (k[0] === "o" || k[0] === "x" || k === "r" + g.inp);
+function whyZero(key, g) {
+  let hasS = false;
+  const per = PER(), laneIx = ix => Math.floor(ix / per) + 1, root = Array.from({length: nWG + 1}, (_, k) => k);
+  const find = a => root[a] === a ? a : (root[a] = find(root[a]));
+  for (const b of blocks) {        // which waveguides are connected to each other, and does anything reflect?
+    const M = blockMatrix(b, g.lc, g);
+    M.forEach((row, r) => row.forEach((z, c) => { if (abs2(z) < 1e-20) return; const a = laneIx(r), bb = laneIx(c); if (a > nWG || bb > nWG) return; if (a !== bb) root[find(a)] = find(bb); else if (per === 2 && r !== c) hasS = true; }));
+  }
+  const lane = +key.slice(1), inL = /^\d+$/.test(g.inp) ? +g.inp : 0;
+  if (inL && lane !== inL && find(lane) !== find(inL)) return `No component connects waveguide ${inL} to waveguide ${lane} (only couplers, MMIs, Y-splitters, crossings and add-drop rings link waveguides), so this port stays dark: 0 power = −∞ dB.`;
+  if (key[0] === "r" && !hasS) return "Nothing here reflects light (only SLMs, mirrors, Bragg gratings, chip-edge reflections and rings with backscatter do), so nothing comes back out on the left: 0 power = −∞ dB.";
+  return "The light arriving here cancels out exactly (destructive interference): 0 power = −∞ dB.";
+}
+function update() {
+  save();
+  const g = glob(), err = validate();
+  $("#err").textContent = err;
+  drawPython(g);
+  let bad = err || !isFinite(g.lc) || !isFinite(g.span) || !isFinite(g.n);
+  if (!bad && g.disp && !(isFinite(g.ng) && g.l0 > 0)) { bad = true; $("#err").textContent = "The group index needs a number (or leave it empty for none), and the dispersion reference λ₀ a wavelength above 0."; }
+  if (!bad && !inputs(g).some(z => abs2(z) > 0)) { bad = true; $("#err").textContent = "No light goes in: every input amplitude is 0. Set at least one amplitude above 0."; }
+  if (bad) lastPorts = null;
+  else { const A0 = inputs(g); lastPorts = {p: addLost(outputs(total(g.lc, g), A0)), Pin: powerIn(A0)};
+    if (!Object.values(lastPorts.p).every(z => isFinite(z[0]) && isFinite(z[1]))) { lastPorts = null; $("#err").textContent = "At exactly this setting a matrix blows up (for example a lossy ring at exact critical coupling, which swallows all the light). Nudge a value slightly."; } }
+  if (!drag) drawSchematic();
+  if (bad || !lastPorts) { $("#readout").innerHTML = ""; $("#why").textContent = ""; return; }
+  blocks.forEach((b, i) => {
+    const els = document.querySelectorAll(`[data-calc="${i}"]`); if (!els.length) return;
+    const el = {set textContent(v) { els.forEach(x => x.textContent = v); }};      // the list and the editor both show it
+    if (PARTS[b.type]) { el.textContent = PARTS[b.type].calc(b, g); return; }
+    if (b.type === "coupler") { const k = R(b.k); el.textContent = `${(k * k * 100).toFixed(1)}% crosses over, ${((1 - k * k) * 100).toFixed(1)}% stays`; }
+    else if (b.type === "wg") { const Ls = wgKeys(b).map(k => R(b[k])), dL = Math.max(...Ls) - Math.min(...Ls); el.textContent = dL ? `largest ΔL = ${fmt(dL)} µm → FSR ≈ ${(g.lc * g.lc / (g.ng * dL * 1000)).toFixed(3)} nm` : "equal lengths on all waveguides"; }
+    else { const as = b.type === "slm2" ? b.arms : [b]; el.textContent = as.map(a => { const k = R(a.k), r = 4 * k * k * (1 - k * k); return `${b.type === "slm2" ? "" : ""}reflects ${(r * 100).toFixed(1)}%, passes ${((1 - r) * 100).toFixed(1)}%`; }).join(" · ") + " (on its own)"; }
+  });
+  const A = inputs(g), Pin = powerIn(A);
+  const T = total(g.lc, g), p = addLost(outputs(T, A)); lastPorts = {p, Pin};
+  const SI = seriesInfo(g);
+  $("#atl").textContent = `Output at ${fmt(g.lc)} nm`;
+  $("#readout").className = "readout" + (SI.length === 2 ? " two" : "");
+  SI.forEach(([k]) => { if (!(k in shown)) shown[k] = isShown(k, g); });
+  $("#readout").innerHTML = SI.map(([k, label, col]) => {
+    const P = abs2(p[k]) / Pin, zero = P < 1e-24;
+    return `<div class="stat" style="--k:var(${col})" data-tipk="port" data-port="${k}"><div class="k">${label}</div>
+      <div class="v">${zero ? "−∞" : (10 * Math.log10(P)).toFixed(2)} dB</div><div class="s">${(P * 100).toFixed(2)}% · ${k[0] === "x" ? "radiated" : "phase " + Math.atan2(p[k][1], p[k][0]).toFixed(3)}</div></div>`;
+  }).join("");
+  const zeros_ = SI.filter(([k]) => shown[k] && k[0] !== "x").filter(([k]) => abs2(p[k]) / Pin < 1e-24).map(([k, label]) => `<b>${label.split(" · ")[0]} is −∞ dB.</b> ${whyZero(k, g)}`);
+  // forward light on the radiation lane of a make-room split = what was on the bottom waveguide when it reached the split
+  // backward light on it = light reflected back through the two branches out of step, radiated at the junction
+  const roomLost = lostList().filter(x => roomY(x.b) && x.b.dir !== "combine").map(x => {
+    const fw = abs2(p["o" + x.lane] || C(0)) / Pin, bw = abs2(p["r" + x.lane] || C(0)) / Pin, why = [];
+    if (fw >= 1e-4) why.push(`light on the bottom waveguide has nowhere to move to (this Y-splitter moves the waveguides below it down one place), so ${(fw * 100).toFixed(2)}% of the input leaves through its radiation channel. Add a waveguide below if that light should keep going`);
+    if (bw >= 1e-4) why.push(`${(bw * 100).toFixed(2)}% of the input comes back through its two branches out of step and is radiated at the junction`);
+    return why.length ? `<b>Light lost at B${x.name}:</b> ${why.join("; and ")}.` : null;
+  }).filter(Boolean);
+  $("#why").innerHTML = [...roomLost.slice(0, 1), ...zeros_.slice(0, 1)].join("<br>");
+  let out = 0, back = 0; for (let L = 1; L <= nWG; L++) { out += abs2(p["o" + L]); back += abs2(p["r" + L]); }
+  for (const x of lostList()) back += abs2(p[x.key]);       // lost light counts in the energy balance
+  const E = (out + back) / Pin;
+  if (model === "fwd") { $("#energy").textContent = `${(out / Pin * 100).toFixed(2)}% gets through`; $("#energy").className = "pill info"; }
+  else {
+    const lossy = list => list.some(b => b.type === "group" ? lossy(b.blocks) : (PARTS[b.type] && "dB" in b && R(b.dB) > 0));
+    const lossless = g.loss === 0 && !lossy(blocks), ok = Math.abs(E - 1) < 1e-6;
+    $("#energy").textContent = `energy out/in ${E.toFixed(4)}${lossless ? "" : " (lossy)"}`;
+    $("#energy").className = "pill " + (!lossless || ok ? "ok" : "warn");
+  }
+  if (tab === "mat") drawMatrices(g, T);
+  if (tab === "ref") drawReference();
+  const wl = [], ser = {}; SI.forEach(([k]) => ser[k] = []);
+  for (let i = 0; i < g.np; i++) {
+    const w = g.lc - g.span / 2 + g.span * i / (g.np - 1), q = addLost(outputs(total(w, g), A));
+    wl.push(w); for (const k in ser) ser[k].push(10 * Math.log10(Math.max(abs2(q[k]) / Pin, 1e-30)));
+  }
+  sweepData = {wl, ser, SI};
+  drawLegend(SI); drawChart();
+}
+
+// ---------- matrices panel ----------
+function labFor(lanes, mdl) {    // row/column names for a matrix over these waveguides ("r…" = a Y-splitter's radiation channel)
+  const r = [], long = [];
+  for (const L of lanes) {
+    const where = typeof L === "string" ? `radiation channel ${L}` : `waveguide ${L}`;
+    if (mdl === "fwd") { r.push(`E${L}⁺`); long.push(`light in ${where}`); } else { r.push(`E${L}⁺`, `E${L}⁻`); long.push(`forward light in ${where}`, `backward light in ${where}`); }
+  }
+  return {r, long};
+}
+const laneName = L => L > nWG ? "r" + (L - nWG) : L;
+let matStore = {};
+function cfmt(z) {
+  const r = Math.abs(z[0]) < 5e-7 ? 0 : z[0], i = Math.abs(z[1]) < 5e-7 ? 0 : z[1];
+  const f = x => (+x.toFixed(4)).toString().replace("-", "−");
+  if (!r && !i) return "0";
+  if (!i) return f(r);
+  if (!r) return (f(i) === "1" ? "" : f(i) === "−1" ? "−" : f(i)) + "j";
+  return `${f(r)} ${i < 0 ? "−" : "+"} ${f(Math.abs(i))}j`;
+}
+function matTable(id, M, sym, mdl = model, lanes = [1, 2]) {
+  const L = labFor(lanes, mdl);
+  return `<div class="mx"><table><tr><th></th>${L.r.map(l => `<th>${l} left</th>`).join("")}</tr>` + L.r.map((rl, r) => `<tr><th>${rl} right</th>` + L.r.map((_, c) => {
+    const txt = sym ? sym[r][c] : cfmt(M[r][c]), z = sym ? sym[r][c] === "0" : abs2(M[r][c]) < 1e-12;
+    return `<td class="${z ? "z" : ""}" data-tipk="cell" data-m="${id}" data-r="${r}" data-c="${c}">${txt}</td>`;
+  }).join("") + `</tr>`).join("") + `</table></div>`;
+}
+function localSym(b, i) {      // formula for a component on its own waveguides
+  const S = blockSym(b, i), k = laneKind(b.type), fw = model === "fwd";
+  if (!S.m) return S;
+  if (k === "one") { const S1 = blockSym({...b, arm: 1}, i); return {m: fw ? [[S1.m[0][0]]] : [[S1.m[0][0], S1.m[0][1]], [S1.m[1][0], S1.m[1][1]]], defs: S1.defs}; }
+  if (k !== "all") return S;
+  const N = nWG, m = Array.from({length: PER() * N}, () => Array(PER() * N).fill("0"));
+  for (let L = 1; L <= N; L++) {
+    let loc;
+    if (b.type === "wg") { const w = wgSym(b["L" + L], `${i + 1},${L}`); loc = fw ? [[w.f]] : [[w.f, "0"], ["0", w.b]]; }
+    else loc = fw ? [[S.m[0][0]]] : [[S.m[0][0], S.m[0][1]], [S.m[1][0], S.m[1][1]]];
+    const o = PER() * (L - 1); loc.forEach((row, r) => row.forEach((z, c) => m[o + r][o + c] = z));
+  }
+  return {m, defs: S.defs};
+}
+function drawMatrices(g, T) {
+  matStore = {};
+  const all = [...Array.from({length: nWG}, (_, k) => k + 1), ...lostList().map((_, j) => "r" + (j + 1))];
+  $("#matnote").textContent = `formula and value at ${fmt(g.lc)} nm · hover over a cell for details`;
+  const prod = blocks.length ? blocks.map((_, i) => `B<sub>${i + 1}</sub>`).reverse().join(" · ") : "1";
+  const dT = det(T), sz = T.length;
+  matStore.T = {M: T, sym: null, title: "the whole circuit", lanes: all};
+  let html = `<div class="mcard"><h3>Whole circuit: T = ${prod} (${sz}×${sz})</h3>${matTable("T", T, null, model, all)}
+    <div class="defs">${model === "bi" ? "Maps the forward and backward fields at the input end to those at the output end. " : "Maps the fields at the input end to those at the output end (reflections discarded). "}|det T| = <span class="mono">${Math.sqrt(abs2(dT)).toFixed(6)}</span>${model === "bi" ? " (exactly 1 for any lossless circuit)" : ""}.
+    The Python tab's “Formulas (SymPy)” option multiplies T out symbolically.</div></div>`;
+  blocks.forEach((b, i) => {
+    const k = laneKind(b.type), it = placed().find(v => v.top === i && v.name === `${i + 1}`);
+    let lanes = lanesOf(b), M;
+    if (k === "all") M = blockMatrix(b, g.lc, g);
+    else if (k === "group") { M = total(g.lc, g, b.blocks, groupN(b)); const extra = M.length / PER() - groupN(b); lanes = [...lanes, ...Array.from({length: extra}, (_, j) => "r" + (j + 1))]; }
+    else { M = itemLocals(it, g.lc, g)[0][0]; lanes = it.lanes.map(laneName); }
+    const S = localSym(b, i);
+    if (b.type === "ysplit") { const Y = PARTS.ysplit.sym(b, "", it.lanes.length); S.m = model === "fwd" ? Y.fwd : Y.bi; S.defs = Y.defs; }
+    matStore["b" + i] = {M, sym: S.m, title: `B${i + 1}`, lanes};
+    const real = lanes.filter(L => typeof L === "number"), where = k === "all" ? "acts on every waveguide" : `acts on waveguide${real.length > 1 ? "s" : ""} ${real.join(" & ")}${lanes.length > real.length ? " and its radiation channel" : ""}${nWG > real.length ? "; all other waveguides pass unchanged" : ""}`;
+    html += `<div class="mcard ${i === selected ? "sel" : ""}" data-mcard="${i}"><h3>B${i + 1} · ${esc(nameOf(b))} <span class="note" style="font-weight:400">· ${where}</span></h3>
+      ${S.m ? `<div class="mpair"><div><div class="cap">Formula</div>${matTable("b" + i, M, S.m, model, lanes)}</div><div><div class="cap">Value at ${fmt(g.lc)} nm</div>${matTable("b" + i, M, null, model, lanes)}</div></div>`
+        : `<div class="cap">Value at ${fmt(g.lc)} nm</div>${matTable("b" + i, M, null, model, lanes)}`}
+      <div class="defs">${S.defs.join(" · ")}</div></div>`;
+  });
+  $("#mats").innerHTML = html;
+}
+const REF_ORDER = ["wg", "phase", "atten", "edge", "mirror", "cross", "ysplit", "mmi", "coupler", "dcl", "slm1", "slm2", "ring", "adddrop", "bragg"];
+let refPage = 0;
+const REF_PER_PAGE = 3;
+const REF_WORDS = {coupler: "directional coupler split", dcl: "wavelength dependent coupler dispersion", mmi: "multimode interference splitter 50/50", ysplit: "y junction splitter combiner branch",
+  cross: "crossing swap intersection", wg: "waveguide length delay propagation", phase: "phase shifter heater tuning thermo", atten: "loss attenuator absorption db",
+  ring: "ring resonator all-pass notch filter", adddrop: "add drop ring resonator filter demultiplexer", slm1: "sagnac loop mirror slm reflector", slm2: "sagnac loop mirror slm pair reflector",
+  mirror: "partial mirror reflector", bragg: "bragg grating reflector filter dbr", edge: "chip edge facet grating coupler fiber input output"};
+function drawReference() {
+  const q = ($("#refq").value || "").trim().toLowerCase();
+  const list = REF_ORDER.filter(t => !q || (nameOf(makeBlock(t)) + " " + (PARTS[t] ? PARTS[t].info : REF_INFO[t]) + " " + REF_WORDS[t]).toLowerCase().includes(q));
+  const pages = Math.max(1, Math.ceil(list.length / REF_PER_PAGE));
+  refPage = Math.min(refPage, pages - 1);
+  $("#refcount").textContent = q ? `${list.length} match${list.length === 1 ? "" : "es"}` : `${list.length} parts`;
+  $("#refpager").innerHTML = pages > 1 ? `<button data-rp="${refPage - 1}" ${refPage ? "" : "disabled"} aria-label="Previous page">‹ Prev</button>` +
+    Array.from({length: pages}, (_, k) => `<button data-rp="${k}" aria-current="${k === refPage}" aria-label="Page ${k + 1}">${k + 1}</button>`).join("") +
+    `<button data-rp="${refPage + 1}" ${refPage < pages - 1 ? "" : "disabled"} aria-label="Next page">Next ›</button>` : "";
+  $("#refpager").querySelectorAll("[data-rp]").forEach(b => b.onclick = () => { refPage = +b.dataset.rp; drawReference(); $("[data-pane=ref]").scrollIntoView({block: "nearest"}); });
+  const shown = list.slice(refPage * REF_PER_PAGE, refPage * REF_PER_PAGE + REF_PER_PAGE);
+  const strip = h => h.replace(/<sub>0,/g, "<sub>").replace(/<sub>0<\/sub>/g, "");
+  const keep = model;
+  const html = shown.map(t => {
+    const b = makeBlock(t), out = {};
+    const rl = t === "ysplit" ? [1, 2, "r"] : [1, 2];
+    for (const md of ["bi", "fwd"]) { model = md; const S = blockSym(b, -1); out[md] = {m: S.m.map(r => r.map(strip)), defs: S.defs.map(strip)}; matStore[`ref-${t}-${md}`] = {M: null, sym: out[md].m, title: `the ${labelOf(b)} formula`, mdl: md, lanes: rl}; }
+    model = keep;
+    const info = PARTS[t] ? PARTS[t].info : REF_INFO[t];
+    return `<div class="mcard"><h3>${nameOf(b)}</h3><p class="note" style="margin:0 0 8px">${info}</p>
+      <div class="mpair"><div><div class="cap">Bidirectional (${2 * rl.length}×${2 * rl.length})</div>${matTable(`ref-${t}-bi`, null, out.bi.m, "bi", rl)}</div><div><div class="cap">Forward only (${rl.length}×${rl.length})</div>${matTable(`ref-${t}-fwd`, null, out.fwd.m, "fwd", rl)}</div></div>
+      <div class="defs">${[...new Set([...out.bi.defs, ...out.fwd.defs])].join(" · ")}</div></div>`;
+  }).join("");
+  model = keep;
+  $("#refmats").innerHTML = (list.length ? html : `<p class="note">No part matches “${esc(q)}”.</p>`) + (refPage < pages - 1 || q ? "" : `<div class="mcard"><h3>Custom components</h3><p class="note" style="margin:0">Created with “Save as component”. A component made of B₁…Bₙ has the transfer matrix Bₙ···B₁.</p></div>`);
+}
+const REF_INFO = {
+  coupler: "Two waveguides run side by side, so light leaks across. κ is the field coupling: κ² of the power crosses, τ² = 1 − κ² stays.",
+  slm1: "A loop that sends part of the light back the way it came, on one waveguide. It reflects 4κ²(1 − κ²) of the power; the other waveguide passes by untouched.",
+  slm2: "A loop mirror on each waveguide at the same spot. Subscripts 1 and 2 mean waveguide 1 and 2.",
+  wg: "Plain waveguide. Light picks up phase βL on the way; going backwards undoes it. Subscripts 1 and 2 mean waveguide 1 and 2.",
+};
+
+// ---------- chart ----------
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+let hoverX = null, chartLin = false;
+document.querySelectorAll("[data-scale]").forEach(b => b.onclick = () => { chartLin = b.dataset.scale === "lin"; document.querySelectorAll("[data-scale]").forEach(x => x.setAttribute("aria-pressed", x === b)); drawChart(); });
+async function saveFile(name, data, mime) {      // Claude's save dialog when available, otherwise a normal browser download
+  const dl = await downloadsP;
+  if (dl) { try { await dl.save({filename: name, data}); return true; } catch (e) { if (e && e.code !== "declined") toast("Couldn't save the file here. Try again in a moment."); return false; } }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], {type: mime})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); return true;
+}
+$("#csvbtn").onclick = async () => {
+  if (!sweepData) return;
+  const {wl, ser, SI} = sweepData, q = t => `"${t.replace(/"/g, "'")}"`;
+  const head = ["wavelength (nm)", ...SI.map(([, l]) => q(`${l} (dB)`)), ...SI.map(([, l]) => q(`${l} (fraction of input)`))].join(",");
+  const rows = wl.map((w, i) => [w.toFixed(6), ...SI.map(([k]) => ser[k][i].toFixed(6)), ...SI.map(([k]) => Math.pow(10, ser[k][i] / 10).toExponential(8))].join(","));
+  if (await saveFile("OpticsBox spectrum.csv", head + "\n" + rows.join("\n") + "\n", "text/csv")) toast("Saved “OpticsBox spectrum.csv”: wavelength, then each port in dB and as a fraction of the input power.");
+};
+function drawLegend(SI) {
+  $("#legend").innerHTML = SI.map(([k, label, col]) => `<label for="sh-${k}"><input type="checkbox" id="sh-${k}" data-sh="${k}" ${shown[k] !== false ? "checked" : ""}><span class="sw" style="--k:var(${col})"></span>${label}</label>`).join("");
+  document.querySelectorAll("[data-sh]").forEach(c => c.onchange = () => { shown[c.dataset.sh] = c.checked; drawChart(); });
+}
+function drawChart() {
+  if (!sweepData) return;
+  const cv = $("#chart"), dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+  const pad = {l: 50, r: 14, t: 12, b: 34}, pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+  const {wl, SI} = sweepData, keys = SI.map(s => s[0]).filter(k => shown[k]);
+  const ser = chartLin ? Object.fromEntries(Object.entries(sweepData.ser).map(([k, a]) => [k, a.map(v => 100 * Math.pow(10, v / 10))])) : sweepData.ser;
+  let lo = Infinity, hi = -Infinity;
+  for (const k of keys) for (const v of ser[k]) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (!keys.length) { lo = -40; hi = 0; }
+  if (chartLin) { lo = 0; hi = keys.length ? Math.max(10, Math.ceil(hi / 10) * 10) : 100; }
+  else { hi = Math.min(5, Math.ceil(hi / 5) * 5 || 0); lo = Math.max(-80, Math.floor(lo / 10) * 10); if (hi - lo < 10) lo = hi - 10; }
+  const X = w => pad.l + (w - wl[0]) / (wl[wl.length - 1] - wl[0]) * pw, Y = v => pad.t + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * ph;
+  x.font = "12px " + css("--f-mono"); x.fillStyle = css("--muted"); x.strokeStyle = css("--grid"); x.lineWidth = 1;
+  const step = (hi - lo) > 40 ? 20 : (hi - lo) > 20 ? 10 : 5;
+  x.textAlign = "right"; x.textBaseline = "middle";
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) { x.beginPath(); x.moveTo(pad.l, Y(v)); x.lineTo(pad.l + pw, Y(v)); x.stroke(); x.fillText(v, pad.l - 6, Y(v)); }
+  x.textBaseline = "top";
+  for (let i = 0; i <= 4; i++) { const w = wl[0] + (wl[wl.length - 1] - wl[0]) * i / 4; x.beginPath(); x.moveTo(X(w), pad.t); x.lineTo(X(w), pad.t + ph); x.stroke();
+    x.textAlign = i === 0 ? "left" : i === 4 ? "right" : "center"; x.fillText(w.toFixed(2), X(w), pad.t + ph + 6); }
+  x.textAlign = "center"; x.fillText("wavelength (nm)", pad.l + pw / 2, pad.t + ph + 20);
+  x.save(); x.translate(12, pad.t + ph / 2); x.rotate(-Math.PI / 2); x.textBaseline = "middle"; x.fillText(chartLin ? "% of input" : "dB", 0, 0); x.restore();
+  for (const [k, , col] of SI) {
+    if (!shown[k]) continue;
+    x.strokeStyle = css(col); x.lineWidth = 1.8; x.beginPath();
+    ser[k].forEach((v, i) => i ? x.lineTo(X(wl[i]), Y(v)) : x.moveTo(X(wl[i]), Y(v))); x.stroke();
+  }
+  const cur = $("#cursor");
+  if (hoverX != null && hoverX >= pad.l && hoverX <= pad.l + pw) {
+    const i = Math.round((hoverX - pad.l) / pw * (wl.length - 1));
+    x.strokeStyle = css("--muted"); x.setLineDash([3, 3]); x.beginPath(); x.moveTo(X(wl[i]), pad.t); x.lineTo(X(wl[i]), pad.t + ph); x.stroke(); x.setLineDash([]);
+    cur.hidden = false;
+    cur.textContent = `${wl[i].toFixed(3)} nm · ` + keys.map(k => `${SI.find(s => s[0] === k)[1].split(" · ")[0]} ${chartLin ? ser[k][i].toFixed(2) + "%" : ser[k][i] <= -299 ? "−∞" : ser[k][i].toFixed(2)}`).join(" · ");
+  } else cur.hidden = true;
+}
+$("#chart").addEventListener("pointermove", e => { hoverX = e.offsetX; drawChart(); });
+$("#chart").addEventListener("pointerleave", () => { hoverX = null; drawChart(); });
+window.addEventListener("resize", drawChart);
+
+// ---------- Python export (self-contained, only NumPy or SymPy needed) ----------
+const PYH = {
+  phase: [`def phase(th): return np.diag([np.exp(-1j*th), np.exp(1j*th)])`,
+          `def phase(th): return np.exp(-1j*th)`,
+          `def phase(th): return sp.diag(sp.exp(-j*th), sp.exp(j*th))`,
+          `def phase(th): return sp.exp(-j*th)`],
+  cross: [`CROSS = np.array([[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], complex)   # swaps the waveguides`,
+          `CROSS = np.array([[0, 1], [1, 0]], complex)   # swaps the waveguides`,
+          `CROSS = sp.Matrix([[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]])`,
+          `CROSS = sp.Matrix([[0, 1], [1, 0]])`],
+  ring: [`def ring(k, L_um, w, rb=0):          # all-pass ring next to one waveguide; rb = backscatter half-way round
+    if k == 0: return np.eye(2, dtype=complex)
+    tau = np.sqrt(1 - k**2); e = np.exp(-(1j*beta(w) + ALPHA/2) * L_um*1e-6)      # one trip round the ring
+    if not rb:
+        t = (tau - e) / (1 - tau*e)
+        return np.diag([t, 1/t])
+    ts = np.sqrt(1 - rb**2); q = 1 - tau*ts*e
+    G = ts*e - rb**2*tau*e**2/q                      # one trip, including the detour through the other direction
+    t, rho = (tau - G)/(1 - tau*G), -1j*k**2*rb*e/((1 - tau*G)*q)
+    return np.array([[t*t - rho*rho, rho], [-rho, 1]]) / t`,
+         `def ring(k, L_um, w, rb=0):          # all-pass ring next to one waveguide; rb = backscatter half-way round
+    if k == 0: return 1
+    tau = np.sqrt(1 - k**2); e = np.exp(-(1j*beta(w) + ALPHA/2) * L_um*1e-6)
+    if not rb: return (tau - e) / (1 - tau*e)
+    ts = np.sqrt(1 - rb**2); q = 1 - tau*ts*e; G = ts*e - rb**2*tau*e**2/q
+    return (tau - G) / (1 - tau*G)                  # what passes (the backscattered light is dropped)`,
+         `def ring(k, l, rb=0):                # all-pass ring (lossless here); rb = backscatter half-way round
+    tau = sp.sqrt(1 - k**2); e = sp.exp(-j*beta*l)
+    if rb == 0:
+        t = (tau - e) / (1 - tau*e)
+        return sp.diag(t, 1/t)
+    ts = sp.sqrt(1 - rb**2); q = 1 - tau*ts*e; G = ts*e - rb**2*tau*e**2/q
+    t, rho = (tau - G)/(1 - tau*G), -j*k**2*rb*e/((1 - tau*G)*q)
+    return sp.Matrix([[t*t - rho*rho, rho], [-rho, 1]]) / t`,
+         `def ring(k, l, rb=0):
+    tau = sp.sqrt(1 - k**2); e = sp.exp(-j*beta*l)
+    if rb == 0: return (tau - e) / (1 - tau*e)
+    ts = sp.sqrt(1 - rb**2); q = 1 - tau*ts*e; G = ts*e - rb**2*tau*e**2/q
+    return (tau - G) / (1 - tau*G)`],
+  mirror: [`def mirror(R):                       # lossless partial mirror, power reflectance R (reflects j*sqrt(R))
+    t, r = np.sqrt(1 - R), np.sqrt(R)
+    return np.array([[1, 1j*r], [-1j*r, 1]]) / t`,
+           `def mirror(R): return np.sqrt(1 - R)  # what passes`,
+           `def mirror(R):
+    t, r = sp.sqrt(1 - R), sp.sqrt(R)
+    return sp.Matrix([[1, j*r], [-j*r, 1]]) / t`,
+           `def mirror(R): return sp.sqrt(1 - R)`],
+  mirror_r: [`def mirror_r(r):                     # lossless mirror, real field reflection r from the left, -r from the right
+    return np.array([[1, -r], [-r, 1]]) / np.sqrt(1 - r**2)`,
+           `def mirror_r(r): return np.sqrt(1 - r**2)   # what passes`,
+           `def mirror_r(r): return sp.Matrix([[1, -r], [-r, 1]]) / sp.sqrt(1 - r**2)`,
+           `def mirror_r(r): return sp.sqrt(1 - r**2)`],
+  bragg: [`def bragg(lam_B, L_um, kg_mm, w):    # uniform Bragg grating (coupled-mode theory), with the waveguide loss
+    bB = beta(lam_B)                                 # the period puts the peak at lam_B
+    d, k, L = beta(w) - bB - 0.5j*ALPHA, kg_mm*1e3, L_um*1e-6
+    g = np.sqrt(complex(k**2 - d**2))
+    C, S = np.cosh(g*L), (np.sinh(g*L)/g if abs(g) > 1e-9 else L)
+    p, q = np.exp(-1j*bB*L), np.exp(1j*bB*L)
+    return np.array([[p*(C - 1j*d*S), -1j*k*S*p], [1j*k*S*q, q*(C + 1j*d*S)]])`,
+          `def bragg(lam_B, L_um, kg_mm, w):    # what passes a uniform Bragg grating
+    bB = beta(lam_B)
+    d, k, L = beta(w) - bB - 0.5j*ALPHA, kg_mm*1e3, L_um*1e-6
+    g = np.sqrt(complex(k**2 - d**2))
+    C, S = np.cosh(g*L), (np.sinh(g*L)/g if abs(g) > 1e-9 else L)
+    return np.exp(-1j*bB*L) / (C + 1j*d*S)`,
+          `def bragg(lam_B, L, kg):             # uniform Bragg grating; lam = wavelength, same units as lam_B
+    bB = beta*lam/lam_B; d = beta - bB; g = sp.sqrt(kg**2 - d**2)
+    C, S = sp.cosh(g*L), sp.sinh(g*L)/g
+    return sp.Matrix([[sp.exp(-j*bB*L)*(C - j*d*S), -j*kg*S*sp.exp(-j*bB*L)], [j*kg*S*sp.exp(j*bB*L), sp.exp(j*bB*L)*(C + j*d*S)]])`,
+          `def bragg(lam_B, L, kg):
+    bB = beta*lam/lam_B; d = beta - bB; g = sp.sqrt(kg**2 - d**2)
+    return sp.exp(-j*bB*L) / (sp.cosh(g*L) + j*d*sp.sinh(g*L)/g)`],
+  mmi: [`def mmi(loss_db):                    # 50/50 MMI splitter
+    a = 10**(-loss_db/20); s = np.sqrt(0.5)
+    return np.array([[a*s, 0, -1j*a*s, 0], [0, s/a, 0, 1j*s/a], [-1j*a*s, 0, a*s, 0], [0, 1j*s/a, 0, s/a]])`,
+        `def mmi(loss_db): return 10**(-loss_db/20) * np.array([[1, -1j], [-1j, 1]]) / np.sqrt(2)`,
+        `def mmi(loss_db):
+    a = 10**(-loss_db/20); s = 1/sp.sqrt(2)
+    return sp.Matrix([[a*s, 0, -j*a*s, 0], [0, s/a, 0, j*s/a], [-j*a*s, 0, a*s, 0], [0, j*s/a, 0, s/a]])`,
+        `def mmi(loss_db): return 10**(-loss_db/20) * sp.Matrix([[1, -j], [-j, 1]]) / sp.sqrt(2)`],
+  atten: [`def atten(loss_db): a = 10**(-loss_db/20); return np.diag([a, 1/a])`,
+          `def atten(loss_db): return 10**(-loss_db/20)`,
+          `def atten(loss_db): a = 10**(-loss_db/20); return sp.diag(a, 1/a)`,
+          `def atten(loss_db): return 10**(-loss_db/20)`],
+  dcl: [`def coupler_wl(k0, lam0, s, w):       # coupler whose strength grows s %/nm with wavelength
+    p = np.arcsin(k0) * (1 + s/100*(w - lam0)); c, k = np.cos(p), np.sin(p)
+    return np.array([[c, 0, -1j*k, 0], [0, c, 0, 1j*k], [-1j*k, 0, c, 0], [0, 1j*k, 0, c]])`,
+        `def coupler_wl(k0, lam0, s, w):
+    p = np.arcsin(k0) * (1 + s/100*(w - lam0)); c, k = np.cos(p), np.sin(p)
+    return np.array([[c, -1j*k], [-1j*k, c]])`,
+        `def coupler_wl(k0, lam0, s):           # lam = wavelength (nm)
+    p = sp.asin(k0)*(1 + s/100*(lam - lam0)); c, k = sp.cos(p), sp.sin(p)
+    return sp.Matrix([[c, 0, -j*k, 0], [0, c, 0, j*k], [-j*k, 0, c, 0], [0, j*k, 0, c]])`,
+        `def coupler_wl(k0, lam0, s):
+    p = sp.asin(k0)*(1 + s/100*(lam - lam0)); c, k = sp.cos(p), sp.sin(p)
+    return sp.Matrix([[c, -j*k], [-j*k, c]])`],
+  adddrop: [`def add_drop(k1, k2, L_um, w):       # ring between the waveguides; dropped light goes BACKWARDS in the other one
+    if k1 == 0 and k2 == 0: return np.eye(4, dtype=complex)
+    t1, t2 = np.sqrt(1 - k1**2), np.sqrt(1 - k2**2)
+    eh = np.exp(-(1j*beta(w) + ALPHA/2) * L_um*1e-6 / 2); e = eh**2      # half and full trip round the ring
+    den = 1 - t1*t2*e
+    t, tp, d = (t1 - t2*e)/den, (t2 - t1*e)/den, -k1*k2*eh/den
+    return np.array([[t - d**2/tp, 0, 0, d/tp], [0, 1/t, -d/t, 0], [0, d/t, tp - d**2/t, 0], [-d/tp, 0, 0, 1/tp]])`,
+            `def add_drop(k1, k2, L_um, w):       # forward only: just the through paths (the drop goes backwards)
+    if k1 == 0 and k2 == 0: return np.eye(2, dtype=complex)
+    t1, t2 = np.sqrt(1 - k1**2), np.sqrt(1 - k2**2)
+    e = np.exp(-(1j*beta(w) + ALPHA/2) * L_um*1e-6); den = 1 - t1*t2*e
+    return np.diag([(t1 - t2*e)/den, (t2 - t1*e)/den])`,
+            `def add_drop(k1, k2, l):              # lossless here; dropped light goes backwards in the other waveguide
+    t1, t2 = sp.sqrt(1 - k1**2), sp.sqrt(1 - k2**2)
+    eh = sp.exp(-j*beta*l/2); e = eh**2; den = 1 - t1*t2*e
+    t, tp, d = (t1 - t2*e)/den, (t2 - t1*e)/den, -k1*k2*eh/den
+    return sp.Matrix([[t - d**2/tp, 0, 0, d/tp], [0, 1/t, -d/t, 0], [0, d/t, tp - d**2/t, 0], [-d/tp, 0, 0, 1/tp]])`,
+            `def add_drop(k1, k2, l):
+    t1, t2 = sp.sqrt(1 - k1**2), sp.sqrt(1 - k2**2)
+    e = sp.exp(-j*beta*l); den = 1 - t1*t2*e
+    return sp.diag((t1 - t2*e)/den, (t2 - t1*e)/den)`],
+  ysplit: [`def ysplit(stem, shape):            # Y-junction on (its two waveguides, its radiation channel r)
+    s = np.sqrt(0.5)
+    Y = {(1, "split"): [[s, 0, s], [s, 0, -s], [0, 1, 0]], (2, "split"): [[0, s, -s], [0, s, s], [1, 0, 0]],
+         (1, "combine"): [[s, s, 0], [0, 0, 1], [s, -s, 0]], (2, "combine"): [[0, 0, 1], [s, s, 0], [-s, s, 0]]}
+    U = np.array(Y[(stem, shape)]); M = np.zeros((6, 6)); M[0::2, 0::2] = U; M[1::2, 1::2] = U
+    return M`,
+           `def ysplit(stem, shape):            # Y-junction on (its two waveguides, its radiation channel r)
+    s = np.sqrt(0.5)
+    Y = {(1, "split"): [[s, 0, s], [s, 0, -s], [0, 1, 0]], (2, "split"): [[0, s, -s], [0, s, s], [1, 0, 0]],
+         (1, "combine"): [[s, s, 0], [0, 0, 1], [s, -s, 0]], (2, "combine"): [[0, 0, 1], [s, s, 0], [-s, s, 0]]}
+    return np.array(Y[(stem, shape)])`,
+           `def ysplit(stem, shape):
+    s = 1/sp.sqrt(2)
+    Y = {(1, "split"): [[s, 0, s], [s, 0, -s], [0, 1, 0]], (2, "split"): [[0, s, -s], [0, s, s], [1, 0, 0]],
+         (1, "combine"): [[s, s, 0], [0, 0, 1], [s, -s, 0]], (2, "combine"): [[0, 0, 1], [s, s, 0], [-s, s, 0]]}
+    U = sp.Matrix(Y[(stem, shape)]); M = sp.zeros(6, 6)
+    for r in range(3):
+        for c in range(3): M[2*r, 2*c] = M[2*r+1, 2*c+1] = U[r, c]
+    return M`,
+           `def ysplit(stem, shape):
+    s = 1/sp.sqrt(2)
+    Y = {(1, "split"): [[s, 0, s], [s, 0, -s], [0, 1, 0]], (2, "split"): [[0, s, -s], [0, s, s], [1, 0, 0]],
+         (1, "combine"): [[s, s, 0], [0, 0, 1], [s, -s, 0]], (2, "combine"): [[0, 0, 1], [s, s, 0], [-s, s, 0]]}
+    return sp.Matrix(Y[(stem, shape)])`],
+  yroom: [`def ysplit_room(m, shape):          # Y-junction that makes room: (stem, branch, waveguides below ..., radiation channel r)
+    s = np.sqrt(0.5); U = np.zeros((m, m)); last = m - 2
+    if shape == "split":
+        U[0, 0] = U[0, m-1] = U[1, 0] = s; U[1, m-1] = -s
+        for j in range(1, last): U[j+1, j] = 1
+        U[m-1, last] = 1
+    else:
+        U[0, 0] = U[0, 1] = U[m-1, 0] = s; U[m-1, 1] = -s
+        for j in range(1, last): U[j, j+1] = 1
+        U[last, m-1] = 1
+    M = np.zeros((2*m, 2*m)); M[0::2, 0::2] = U; M[1::2, 1::2] = U
+    return M`,
+          `def ysplit_room(m, shape):          # Y-junction that makes room: (stem, branch, waveguides below ..., radiation channel r)
+    s = np.sqrt(0.5); U = np.zeros((m, m)); last = m - 2
+    if shape == "split":
+        U[0, 0] = U[0, m-1] = U[1, 0] = s; U[1, m-1] = -s
+        for j in range(1, last): U[j+1, j] = 1
+        U[m-1, last] = 1
+    else:
+        U[0, 0] = U[0, 1] = U[m-1, 0] = s; U[m-1, 1] = -s
+        for j in range(1, last): U[j, j+1] = 1
+        U[last, m-1] = 1
+    return U`,
+          `def ysplit_room(m, shape):          # Y-junction that makes room: (stem, branch, waveguides below ..., radiation channel r)
+    s = 1/sp.sqrt(2); U = sp.zeros(m, m); last = m - 2
+    if shape == "split":
+        U[0, 0] = U[0, m-1] = U[1, 0] = s; U[1, m-1] = -s
+        for j in range(1, last): U[j+1, j] = 1
+        U[m-1, last] = 1
+    else:
+        U[0, 0] = U[0, 1] = U[m-1, 0] = s; U[m-1, 1] = -s
+        for j in range(1, last): U[j, j+1] = 1
+        U[last, m-1] = 1
+    M = sp.zeros(2*m, 2*m)
+    for r in range(m):
+        for c in range(m): M[2*r, 2*c] = M[2*r+1, 2*c+1] = U[r, c]
+    return M`,
+          `def ysplit_room(m, shape):          # Y-junction that makes room: (stem, branch, waveguides below ..., radiation channel r)
+    s = 1/sp.sqrt(2); U = sp.zeros(m, m); last = m - 2
+    if shape == "split":
+        U[0, 0] = U[0, m-1] = U[1, 0] = s; U[1, m-1] = -s
+        for j in range(1, last): U[j+1, j] = 1
+        U[m-1, last] = 1
+    else:
+        U[0, 0] = U[0, 1] = U[m-1, 0] = s; U[m-1, 1] = -s
+        for j in range(1, last): U[j, j+1] = 1
+        U[last, m-1] = 1
+    return U`],
+  edge: [`def edge(loss_db, R):                 # chip edge / grating coupler on one waveguide
+    a = 10**(-loss_db/20)
+    return np.diag([a, 1/a]) @ mirror(R)`,
+         `def edge(loss_db, R): return 10**(-loss_db/20) * np.sqrt(1 - R)`,
+         `def edge(loss_db, R): return sp.diag(10**(-loss_db/20), 10**(loss_db/20)) * mirror(R)`,
+         `def edge(loss_db, R): return 10**(-loss_db/20) * sp.sqrt(1 - R)`],
+};
+function drawPython(g) {
+  const sym = $("#pykind").value === "sympy", fw = model === "fwd", names = new Map(), N = nWG;
+  const py = (raw, auto, kind) => { if (typeof raw === "string") { names.set(raw, kind); return raw; } if (sym) { names.set(auto, kind); return auto; } return String(fmt(raw)); };
+  const subP = s => s.replace(/[.,]/g, "_");
+  const phase = (a, sub) => a.mode === "loop" ? (sym ? `beta*${py(a.L, "l_" + subP(sub), "L")}` : `loop_phase(${py(a.L, "", "L")}, w)`) : py(a.phi, "phi_" + subP(sub), "phi");
+  const slmE = (a, sub) => `slm(${py(a.k, "kappa_" + subP(sub), "k")}, ${phase(a, sub)})`;
+  const wgE = (raw, sub) => sym ? `wg(${py(raw, "L_" + subP(sub), "L")})` : `wg(${py(raw, "", "L")}, w)`;
+  const need = new Set(), W = sym ? "" : ", w"; let auxN = 0;
+  const at = (e, first) => `place(${e}, ${first})`;
+  const exprOf = (b, s, off, ctxN) => {      // off: waveguide offset (inside a custom component); ctxN: waveguides in this context
+    const A = (raw, auto, kind) => py(raw, `${auto}_${subP(s)}`, kind);
+    const one = (b.arm || 1) + off, two = (b.at || 1) + off;
+    const every = list => at(`lanes(${list.join(", ")})`, off + 1);
+    if (PARTS[b.type]) need.add(b.type === "mirror" && b.conv === "r" ? "mirror_r" : b.type);
+    if (b.type === "edge") need.add("mirror");
+    if (b.type === "bragg" || b.type === "dcl") need.add("lam");
+    switch (b.type) {
+      case "coupler": return at(`coupler(${py(b.k, "kappa_" + subP(s), "k")})`, two);
+      case "wg": return every(Array.from({length: ctxN}, (_, k) => wgE(b["L" + (k + 1)] ?? 0, `${s},${k + 1}`)));
+      case "slm1": return at(slmE(b, s), one);
+      case "slm2": return at(`lanes(${slmE(b.arms[0], s + ",1")}, ${slmE(b.arms[1], s + ",2")})`, two);
+      case "phase": return at(`phase(${A(b.th, "theta", "th")})`, one);
+      case "cross": return at("CROSS", two);
+      case "ring": return at(`ring(${A(b.k, "kappa", "k")}, ${A(b.L, "l", "L")}${W}${yHas(b.rb) ? `, ${A(b.rb, "rb", "rb")}` : ""})`, one);
+      case "mirror": return b.conv === "r" ? at(`mirror_r(${A(b.r, "r", "rf")})`, one) : at(`mirror(${A(b.R, "R", "R")})`, one);
+      case "bragg": return at(`bragg(${A(b.lam, "lamB", "lam")}, ${A(b.L, "L", "L")}, ${A(b.kg, "kg", "kg")}${W})`, one);
+      case "mmi": return at(`mmi(${A(b.dB, "loss", "dB")})`, two);
+      case "atten": return at(`atten(${A(b.dB, "loss", "dB")})`, one);
+      case "dcl": return at(`coupler_wl(${A(b.k, "kappa0", "k")}, ${A(b.lam, "lam0", "lam")}, ${A(b.s, "s", "s")}${W})`, two);
+      case "adddrop": return at(`add_drop(${A(b.k1, "kappa1", "k")}, ${A(b.k2, "kappa2", "k")}, ${A(b.L, "l", "L")}${W})`, two);
+      case "ysplit": { const shape = b.dir === "combine" ? "combine" : "split", room = roomY(b), bottom = off + ctxN;
+        let y;
+        if (!room) y = at(`ysplit(${b.stem === 2 ? 2 : 1}, "${shape}")`, `[${two}, ${two + 1}, W + ${++auxN}]`);
+        else { need.add("yroom"); const ls = Array.from({length: bottom - two + 1}, (_, k) => two + k); y = at(`ysplit_room(${ls.length + 1}, "${shape}")`, `[${ls.join(", ")}, W + ${++auxN}]`); }
+        const br = yHas(b.Lb) ? at(`lanes(${wgE(b.Lb, s + ",b")}, ${wgE(b.Lb, s + ",b")})`, two) : null;          // both branches
+        const first = shape === "combine" ? two + 1 : two + 2, last = shape === "combine" ? bottom - 1 : bottom;   // the shifted waveguides
+        const sh = room && yHas(b.Ls) && last >= first ? at(`lanes(${Array(last - first + 1).fill(wgE(b.Ls, s + ",s")).join(", ")})`, first) : null;
+        const run = (a, z) => yHas(b.Ls) && z >= a ? at(`lanes(${Array(z - a + 1).fill(wgE(b.Ls, s + ",s")).join(", ")})`, a) : null;
+        const above = run(off + 1, two - 1), below = room ? null : run(two + 2, bottom);       // other waveguides that step aside
+        return (shape === "combine" ? [br, y, sh, above, below] : [y, br, sh, above, below]).filter(Boolean); }
+      case "edge": { const e = `edge(${A(b.dB, "loss", "dB")}, ${A(b.R, "R", "R")})`; return every(Array(ctxN).fill(e)); }
+    }
+  };
+  const lineOf = (b, s, off, ctxN) => b.type === "group"
+    ? b.blocks.flatMap((x, j) => lineOf(x, `${s}.${j + 1}`, off + (b.at || 1) - 1, groupN(b))).map(([l, c], k) => [l, k ? c : `${c}  (start of custom component "${b.name}")`])
+    : (rs => rs.map(e => [e, rs.length > 1 && !/ysplit/.test(e) ? `B${s} ${labelOf(b)}: path lengths` : `B${s} ${labelOf(b)}`]))([].concat(exprOf(b, s, off, ctxN)));
+  const rows = blocks.flatMap((b, i) => lineOf(b, `${i + 1}`, 0, N));
+  const body = rows.map(([l, c]) => `        ${l},`.padEnd(48) + `# ${c}`).join("\n");
+  const hk = (sym ? 2 : 0) + (fw ? 1 : 0);
+  const helpers = ["phase", "cross", "ring", "adddrop", "ysplit", "yroom", "mirror", "mirror_r", "bragg", "mmi", "atten", "dcl", "edge"].filter(t => need.has(t)).map(t => PYH[t][hk]).join("\n\n")
+    .replace("bB = beta*lam/lam_B;", g.disp ? "bB = beta_at(lam_B);   # beta at the Bragg wavelength (with dispersion it isn't beta*lam/lam_B)\n   " : "bB = beta*lam/lam_B;");
+  const K = placed().nAux, Ain = [...inputs(g), ...Array(K).fill(C(0))], Avals = Ain.map(z => { const a = Math.hypot(z[0], z[1]), ph = Math.atan2(z[1], z[0]); return Math.abs(ph) < 1e-12 ? `${fmt(a)}` : `${fmt(a)}*np.exp(1j*${fmt(ph)})`; });
+  const basis = fw ? Array.from({length: N}, (_, k) => `E${k + 1}+`).join(", ") : Array.from({length: N}, (_, k) => `E${k + 1}+, E${k + 1}-`).join(", ");
+  let code;
+  if (!sym) {
+    const named = [...names.keys()].map(k => `${k} = ${fmt(R(k))}`).join("\n");
+    code = `import numpy as np
+
+W = ${N}                              # number of waveguides
+N = W + ${K}                          # plus one radiation channel per Y-splitter (light lost at the junction)
+N_EFF, LOSS = ${fmt(g.n)}, ${fmt(g.loss)}      # effective index, loss in dB/cm
+${g.disp ? `N_G, LAM0 = ${fmt(g.ng)}, ${fmt(g.l0)}       # group index, reference wavelength (nm) of the dispersion
+` : ""}ALPHA = LOSS*100*np.log(10)/10        # power loss per metre
+${named ? named + "\n" : ""}
+${g.disp ? `def beta(w):                        # propagation constant (rad/m) at w nm: first-order dispersion about LAM0
+    l0 = LAM0*1e-9
+    return 2*np.pi*N_EFF/l0 + 2*np.pi*N_G/l0**2 * (l0 - w*1e-9)` : `def beta(w): return 2*np.pi*N_EFF / (w*1e-9)      # propagation constant (rad/m) at w nm`}
+
+${fw ? `# Forward only: basis [${basis}]; reflected light is discarded
+def coupler(k):
+    t = np.sqrt(1 - k**2)
+    return np.array([[t, -1j*k], [-1j*k, t]])
+
+def slm(k, phi):                    # transmission of one pass through a Sagnac loop mirror
+    return (1 - 2*k**2) * np.exp(-1j*phi)
+
+def wg(L_um, w):
+    return np.exp(-(1j*beta(w) + ALPHA/2) * L_um*1e-6)
+
+def lanes(*ms): return np.diag(ms).astype(complex)      # one value per waveguide
+
+def place(M, at):                   # component on waveguide(s) at = first waveguide, or a list; all others unchanged
+    M = np.atleast_2d(M); ls = list(range(at, at + M.shape[0])) if np.isscalar(at) else at
+    ix = [L - 1 for L in ls]; T = np.eye(N, dtype=complex); T[np.ix_(ix, ix)] = M
+    return T` : `# Bidirectional: basis [${basis}]; each component: right = M @ left
+def coupler(k):
+    t = np.sqrt(1 - k**2)
+    return np.array([[t, 0, -1j*k, 0], [0, t, 0, 1j*k], [-1j*k, 0, t, 0], [0, 1j*k, 0, t]])
+
+def slm(k, phi):                    # Sagnac loop mirror on one waveguide (2x2)
+    t = np.sqrt(1 - k**2); m = 2j*k*t
+    return np.array([[np.exp(-1j*phi), -m], [m, np.exp(1j*phi)]]) / (1 - 2*k**2)
+
+def wg(L_um, w):
+    g = np.exp(-(1j*beta(w) + ALPHA/2) * L_um*1e-6)
+    return np.diag([g, 1/g])
+
+def lanes(*ms):                     # one 2x2 block per waveguide (block-diagonal)
+    T = np.zeros((2*len(ms), 2*len(ms)), complex)
+    for i, m in enumerate(ms): T[2*i:2*i+2, 2*i:2*i+2] = m
+    return T
+
+def place(M, at):                   # component on waveguide(s) at = first waveguide, or a list; all others unchanged
+    M = np.atleast_2d(M); ls = list(range(at, at + M.shape[0] // 2)) if np.isscalar(at) else at
+    ix = [2*(L - 1) + d for L in ls for d in (0, 1)]; T = np.eye(2*N, dtype=complex); T[np.ix_(ix, ix)] = M
+    return T`}
+${helpers ? "\n" + helpers + "\n" : ""}
+def loop_phase(L_um, w): return beta(w)*L_um*1e-6
+
+def build(w):                       # w = wavelength in nm; components in order, input to output
+    return [
+${body}
+    ]
+
+def total(w):
+    T = np.eye(${fw ? "N" : "2*N"}, dtype=complex)
+    for B in build(w): T = B @ T
+    return T
+
+${fw ? `def outputs(T, A):                  # A = input amplitude on each waveguide; returns the output on each waveguide
+    return T @ A, np.zeros(N)` : `def outputs(T, A):                  # A = input amplitude on each waveguide; nothing enters from the output end
+    f, b = list(range(0, 2*N, 2)), list(range(1, 2*N, 2))
+    back = np.linalg.solve(T[np.ix_(b, b)], -(T[np.ix_(b, f)] @ A))
+    left = np.zeros(2*N, complex); left[f] = A; left[b] = back
+    return (T @ left)[f], back      # outputs at the output end, reflections at the input end`}
+
+A = np.array([${Avals.join(", ")}], dtype=complex)
+wl = np.linspace(${fmt(g.lc - g.span / 2)}, ${fmt(g.lc + g.span / 2)}, ${g.np})
+out, back = map(np.array, zip(*[outputs(total(w), A) for w in wl]))
+P_out, P_back = np.abs(out)**2 / np.sum(np.abs(A)**2), np.abs(back)**2 / np.sum(np.abs(A)**2)
+c = len(wl) // 2
+print("outputs at the centre wavelength (dB):", (10*np.log10(np.maximum(P_out[c][:W], 1e-30))).round(2))
+print("reflections at the centre wavelength (dB):", (10*np.log10(np.maximum(P_back[c][:W], 1e-30))).round(2))
+if N > W: print("lost at each Y-splitter (fraction of input):", (P_out[c][W:] + P_back[c][W:]).round(6))`;
+  } else {
+    const pad = K ? ` + [0]*${K}` : "";
+    const Aexpr = g.inp === "custom" ? `list(sp.symbols("A1:${N + 1}"))${pad}` : `[${Array.from({length: N}, (_, k) => g.inp === "all" || k + 1 === +g.inp ? 1 : 0).join(", ")}]${pad}`;
+    const decl = [...names].map(([k, kind]) => `${k} = sp.Symbol("${k}", ${["phi", "th", "s", "rf"].includes(kind) ? "real" : "positive"}=True)`).join("\n");
+    code = `import sympy as sp
+
+W = ${N}                              # number of waveguides
+N = W + ${K}                          # plus one radiation channel per Y-splitter (light lost at the junction)
+j = sp.I
+beta = sp.Symbol("beta", positive=True)      # propagation constant: ${g.disp ? "2*pi*N_EFF/LAM0 + 2*pi*N_G*(LAM0 - lam)/LAM0**2 (first-order dispersion)" : "2*pi*n_eff / wavelength"}
+${g.disp && need.has("bragg") ? `beta_at = sp.Function("beta")              # beta at another wavelength, e.g. beta_at(lam_B) for a grating\n` : ""}${need.has("lam") ? `lam = sp.Symbol("lam", positive=True)        # wavelength, for components that change with it\n` : ""}${decl}
+
+${fw ? `# Forward only: basis [${basis}]; reflected light is discarded
+def coupler(k):
+    t = sp.sqrt(1 - k**2)
+    return sp.Matrix([[t, -j*k], [-j*k, t]])
+
+def slm(k, phi): return (1 - 2*k**2) * sp.exp(-j*phi)
+def wg(L): return sp.exp(-j*beta*L)
+lanes = sp.diag                     # one value per waveguide
+
+def place(M, at):                   # component on waveguide(s) at = first waveguide, or a list; all others unchanged
+    M = M if isinstance(M, sp.MatrixBase) else sp.Matrix([[M]]); ls = list(range(at, at + M.shape[0])) if isinstance(at, int) else at
+    ix = [L - 1 for L in ls]; T = sp.eye(N)
+    for r, a in enumerate(ix):
+        for c, b in enumerate(ix): T[a, b] = M[r, c]
+    return T` : `# Bidirectional: basis [${basis}]; each component: right = M * left
+def coupler(k):
+    t = sp.sqrt(1 - k**2)
+    return sp.Matrix([[t, 0, -j*k, 0], [0, t, 0, j*k], [-j*k, 0, t, 0], [0, j*k, 0, t]])
+
+def slm(k, phi):
+    t = sp.sqrt(1 - k**2); m = 2*j*k*t
+    return sp.Matrix([[sp.exp(-j*phi), -m], [m, sp.exp(j*phi)]]) / (1 - 2*k**2)
+
+def wg(L): return sp.diag(sp.exp(-j*beta*L), sp.exp(j*beta*L))
+lanes = sp.diag                     # block-diagonal: one block per waveguide
+
+def place(M, at):                   # component on waveguide(s) at = first waveguide, or a list; all others unchanged
+    M = M if isinstance(M, sp.MatrixBase) else sp.Matrix([[M]]); ls = list(range(at, at + M.shape[0] // 2)) if isinstance(at, int) else at
+    ix = [2*(L - 1) + d for L in ls for d in (0, 1)]; T = sp.eye(2*N)
+    for r, a in enumerate(ix):
+        for c, b in enumerate(ix): T[a, b] = M[r, c]
+    return T`}
+${helpers ? "\n" + helpers + "\n" : ""}
+blocks = [                          # components in order, input to output
+${rows.map(([l, c]) => `    ${l},`.padEnd(44) + `# ${c}`).join("\n")}
+]
+T = sp.eye(${fw ? "N" : "2*N"})
+for B in blocks: T = B * T
+T = sp.simplify(T)
+sp.pprint(T)
+
+A = ${Aexpr}                        # input amplitude on each waveguide
+${fw ? `out = sp.simplify(T * sp.Matrix(A))
+for i in range(W):
+    print("out%d =" % (i + 1)); sp.pprint(out[i])` : `bs = sp.symbols("b1:%d" % (N + 1))              # unknown light reflected back out at the input end
+right = T * sp.Matrix([x for pair in zip(A, bs) for x in pair])
+sol = sp.solve([right[2*i + 1] for i in range(N)], bs, dict=True)[0]   # nothing enters from the output end
+for i in range(W):
+    print("out%d =" % (i + 1)); sp.pprint(sp.simplify(right[2*i].subs(sol)))
+    print("back%d =" % (i + 1)); sp.pprint(sp.simplify(bs[i].subs(sol)))`}`;
+  }
+  $("#py").textContent = code;
+}
+$("#copy").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#py").textContent); $("#copy").textContent = "Copied"; }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($("#py")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("#copy").textContent = "Selected: press Ctrl+C"; }
+  setTimeout(() => $("#copy").textContent = "Copy code", 1800);
+};
+
+// ---------- hover explanations ----------
+const TIPS = {
+  model: () => `<b>Bidirectional</b>: forward and backward fields are both modelled (4×4 transfer matrices), including multiple reflections between components.<br><br><b>Forward only</b>: only the forward field is modelled (2×2 matrices); reflected light is discarded. Appropriate when reflections are negligible.`,
+  share: () => onWebsite ? `Creates a link that opens this circuit.` : `Saves <b>OpticsBox circuit.html</b>, a single file containing this circuit. It opens in any web browser (Chrome, Edge, Safari, Firefox), offline and without installation.`,
+  "add-coupler": () => `<b>Directional coupler.</b> Two waveguides run close together, so some light hops across. κ is the field coupling: κ² of the power crosses over.<br>Drag onto the circuit, or click to append.`,
+  "add-slm1": () => `<b>Sagnac loop mirror (SLM)</b> on <i>one</i> waveguide: a loop that sends part of the light back. Reflects 4κ²(1−κ²) of the power. Pick which waveguide it sits on.`,
+  "add-slm2": () => `<b>SLM pair</b>: one loop mirror on each waveguide at the same spot (the middle element of the coupler–SLM–coupler structure).`,
+  "add-wg": () => `<b>Waveguide sections</b>: plain lengths of each waveguide. A length difference ΔL between the two makes an interferometer.`,
+  "name-coupler": () => TIPS["add-coupler"](), "name-slm1": () => TIPS["add-slm1"](), "name-slm2": () => TIPS["add-slm2"](), "name-wg": () => TIPS["add-wg"](),
+  k: () => `<b>κ</b>: field coupling of the coupler, from 0 to 1.<br>Power crossing over = κ², staying = τ² = 1 − κ².<br>κ = 0.7071 is a 50/50 split; κ = 1 swaps everything. Arrows step 0.01; the slider is finer.`,
+  slmk: () => `<b>κ</b> of the small coupler that closes the loop. It sets how strongly the SLM reflects: R = 4κ²(1−κ²).<br>κ = 0: no loop, light passes straight through.<br>κ ≈ 0.7071 (κ² = ½): a perfect mirror, nothing passes.`,
+  phi: () => `<b>φ</b>: phase picked up going round the loop, in radians (2π = one full cycle). Fixed: it doesn't change with wavelength.`,
+  loopL: () => `<b>Loop length</b> in µm. The phase then follows the wavelength: φ = β·ℓ = 2π·n<sub>eff</sub>·ℓ/λ (or the dispersion formula, with a group index set).`,
+  mode: () => `Set the loop phase directly (φ), or from the loop's physical length (it then changes across the sweep).`,
+  slmarm: () => `Which waveguide this single loop mirror is on. The other waveguide passes straight by.`,
+  L: () => `<b>Length</b> of this waveguide section in µm. Light picks up phase β·L, with β = 2π·n<sub>eff</sub>/λ (or the dispersion formula, with a group index set). Two different lengths make the arms interfere; the fringe spacing is ≈ λ²/(n<sub>g</sub>·ΔL).<br>Can also be set by dragging the ⟷ handle in the circuit.`,
+  grip: () => `Drag sideways to stretch or shrink this waveguide. Hold <b>Shift</b> for fine steps.`,
+  sblock: el => { const i = +el.dataset.bi, b = blocks[i]; return `<b>B${i + 1} · ${esc(nameOf(b))}</b><br>Click to edit · drag sideways to reorder.` + (laneKind(b.type) !== "all" ? " Drag up or down to move it to other waveguides." : "") + (b.type === "wg" ? " Drag the ⟷ handles to change the lengths." : ""); },
+  th: () => `<b>θ</b>: extra phase in radians (π = half a cycle). Same at every wavelength.`,
+  ringk: () => `<b>κ</b> of the gap between ring and waveguide: κ² of the light hops into the ring each pass. Small κ = sharp, deep resonances (if loss is low).`,
+  ringL: () => `Distance once round the ring, in µm. Resonances repeat every ≈ λ²/(n<sub>g</sub>·ℓ) nm (n<sub>g</sub> = the group index, or n<sub>eff</sub> if none is set). Loss in the ring comes from the loss setting.`,
+  R: () => `<b>R</b>: power reflectance, the share of the power reflected, 0 to 0.99. (The reflected field is j√R.)`,
+  lamB: () => `The wavelength the grating reflects most strongly.`, braggL: () => `How long the grating is. Longer = reflects more, over a narrower band.`,
+  kg: () => `How strongly each grating tooth reflects, per mm. Peak reflection = tanh²(κ·L).`,
+  dB: () => `Power lost, in dB. 3 dB = half, 10 dB = a tenth.`,
+  k0: () => `κ at the reference wavelength (field coupling, 0 to 1).`, lam0: () => `The wavelength where the coupler has exactly that κ.`,
+  sdcl: () => `How much stronger the coupling gets per nm of extra wavelength, in %. Real couplers: roughly 0.1 to 0.5 %/nm. 0 = an ordinary coupler.`,
+  edB: () => `Power lost getting on or off the chip, per waveguide. Grating couplers: about 2 to 5 dB; polished edges: about 1 to 2 dB.`,
+  eR: () => `Share of power reflected at the edge (a cleaved silicon facet reflects about 0.3; an anti-reflection-coated one almost 0).`,
+  adk1: () => `How strongly the ring couples to waveguide 1 (field κ, 0 to 1).`, adk2: () => `How strongly the ring couples to waveguide 2. Equal κs and no loss = all the light drops at resonance.`,
+  ybl: () => `Path length of each branch of the Y (both equal), in µm. Adds phase β·L and the waveguide loss. 0 = an ideal junction of no length; only differences between paths that meet again later change the outputs.`,
+  ysl: () => `Extra path length of every waveguide that steps aside at the junction (S-bend length minus a straight line), in µm: as drawn, the waveguides above and below move half a spacing. If it equals the branch length, all paths gain the same phase and nothing but loss changes.`,
+  yroom: () => `<b>Shift to make room</b>: when splitting, the new branch takes the place directly below the stem and every waveguide below moves down one place, so they keep going (a waveguide is added for this). When combining, the waveguides below move up to close the gap. <b>Stay in place</b>: the waveguide beside the stem ends at the junction and its light is lost.`,
+  ystem: () => `Which waveguide is the single “stem” of the Y.`, ydir: () => `Splitting: one waveguide becomes two. Combining: two become one; light arriving out of phase is lost.`,
+  "add-lane": () => `<b>Waveguide.</b> Adds a waveguide below the others (up to ${MAXWG}). Click, or drag onto the circuit. Remove one with the ✕ next to its input label.`,
+  probe: () => `<b>Probe.</b> Turn on, then move over the circuit: it shows how much of the input power is in each waveguide at that point, travelling forward (→) and backward (←). Click to pin it in place while you change things.`,
+  scale: () => `Show the spectrum in dB (good for deep dips) or as a percentage of the input power (good for seeing where the light goes).`,
+  csv: () => `Downloads the spectrum as a CSV file: wavelength, then every port in dB and as a fraction of the input power. Opens in Excel, Python, MATLAB.`,
+  reset: () => `Clears the circuit and returns all settings to their defaults (2 waveguides, 1550 nm, Bidirectional). Asks for confirmation first. Saved presets and custom components are kept.`,
+  undo: () => `Undo the last change (Ctrl+Z). Quick successive edits, such as dragging a slider, count as one step.`,
+  redo: () => `Redo (Ctrl+Y or Ctrl+Shift+Z).`,
+  lanex: el => `Remove waveguide ${el.dataset.lane}. Components on it are removed too (Undo is offered).`,
+  atsel: () => `Which neighbouring waveguides this component sits between. It can also be dragged up or down in the circuit.`,
+  armsel: () => `Which waveguide this part sits on. The other one passes straight by.`,
+  ungroup: () => `Replaces this custom component with the components it contains.`,
+  saveaspart: () => `Saves the current circuit as a single custom component in the palette, for reuse in other circuits (for example a complete Mach–Zehnder interferometer).`,
+  mypart: () => `Custom component. Drag it into the circuit like any other component. Delete it under Presets.`,
+  "name-group": () => `Custom component made of several components. Use Ungroup to edit them individually.`,
+  inp: () => `Where light enters on the left: one waveguide, <b>all</b> waveguides equally (in phase), or <b>custom</b> amplitudes and phases for each, for example to model the output of a preceding splitter.`,
+  a1: () => `Field amplitude into this waveguide. Power = amplitude².`,
+  dp: () => `Phase of the light into this waveguide, in radians. Only phase differences between inputs matter.`,
+  lc: () => `Centre of the wavelength sweep. The numbers under “Results” and the matrices are at this wavelength.`,
+  ls: () => `How wide a range of wavelengths the spectrum covers.`, np: () => `How many wavelengths are calculated across the sweep. More = smoother lines.`,
+  ne: () => `<b>Effective index</b> of the waveguide mode. Sets β = 2π·n<sub>eff</sub>/λ, so how much phase a length of waveguide adds. With a group index set, it is the index at λ<sub>0</sub>.`,
+  ng: () => `<b>Group index</b> n<sub>g</sub>: sets the resonance spacing, λ<sup>2</sup>/(n<sub>g</sub>·L) for a ring (silicon wires: about 4.2). Empty = no dispersion.`,
+  l0: () => `<b>Reference wavelength λ<sub>0</sub></b> of the dispersion: where the index is exactly n<sub>eff</sub>. Only used when a group index is set.`,
+  ringrb: () => `<b>Backscatter</b>: field reflection r<sub>s</sub> of one small reflector half-way round the ring, a simple stand-in for sidewall roughness. It couples the clockwise and counter-clockwise light, so each resonance splits in two, about asin(r<sub>s</sub>)/π of the resonance spacing apart (a little less when the ring is strongly coupled), and some light is reflected back along the waveguide. 0 = none, the plain ring.`,
+  rf: () => `<b>r</b>: real field reflection coefficient, −0.99 to 0.99, as at a refractive-index step (r = (n<sub>1</sub> − n<sub>2</sub>)/(n<sub>1</sub> + n<sub>2</sub>) seen from side 1). It reflects r from the left and −r from the right; the power reflected is R = r<sup>2</sup>.`,
+  mconv: () => `How the mirror is set. <b>Power reflectance R</b>: share of the power reflected; the reflected field is j√R from either side. <b>Field reflection r</b>: a real amplitude coefficient, r from the left and −r from the right. Both reflect the same power for R = r<sup>2</sup>; only the phase of the reflection differs, which matters when reflections interfere (for example in a Fabry–Pérot).`,
+  lo: () => `Propagation loss of the waveguides in dB per cm. 0 = lossless, and then the energy check should read exactly 1.`,
+  energy: () => model === "fwd" ? `Share of the input power that leaves on the right. In <b>Forward only</b> the reflected part is dropped, so this is below 100% whenever an SLM reflects.`
+    : `<b>Energy check</b>: all power leaving (both outputs + both reflections) divided by power in. With no loss it must be exactly 1. If it isn't, a matrix is unphysical.`,
+  prange: () => `Range of the slider for this parameter.`, unlink: () => `Replace this name with its current number everywhere it's used.`,
+  port: el => {
+    const k = el.dataset.port, g = glob(), l = seriesInfo(g).find(s => s[0] === k)[1];
+    const desc = k[0] === "o" ? `light leaving waveguide ${k.slice(1)} at the output end` : k[0] === "r" ? `light reflected back out of waveguide ${k.slice(1)} at the input end` : `light that leaves the circuit at this Y-splitter: the waveguide ending at the junction, or out-of-phase light it radiates. It is part of the energy balance`;
+    let s = `<b>${l}</b>: ${desc}. dB and % are relative to the total input power; phase in radians.`;
+    if (lastPorts && abs2(lastPorts.p[k]) / lastPorts.Pin < 1e-24) s += `<br><br>${whyZero(k, g)}`;
+    return s;
+  },
+  cell: el => {
+    const st = matStore[el.dataset.m]; if (!st) return "";
+    const r = +el.dataset.r, c = +el.dataset.c, L = labFor(st.lanes || [1, 2], st.mdl || model);
+    const head = `<b>Row ${L.r[r]}, column ${L.r[c]}</b> of ${st.title}<br>How much ${L.long[c]} at the <b>left</b> end shows up as ${L.long[r]} at the <b>right</b> end.`;
+    if (!st.M) return head + `<br><br>Formula: <span class="f">${st.sym[r][c]}</span>`;
+    const z = st.M[r][c], mag = Math.sqrt(abs2(z)), ph = Math.atan2(z[1], z[0]);
+    return head +
+      (st.sym ? `<br><br>Formula: <span class="f">${st.sym[r][c]}</span>` : "") +
+      `<br>Value at λ = ${fmt(glob().lc)} nm: <span class="f">${cfmt(z)}</span><br><span class="f">size ${mag.toFixed(4)} · phase ${ph.toFixed(3)} rad · size² ${(mag * mag).toFixed(4)}</span>` +
+      (model === "bi" && (r % 2 === 1 || c % 2 === 1) && mag > 1 ? `<br><br>Entries above 1 are normal in a transfer matrix: it relates fields on the two ends, it isn't “output = input”.` : "");
+  },
+};
+for (const [t, P] of Object.entries(PARTS)) { TIPS["add-" + t] = TIPS["name-" + t] = () => `<b>${P.name}.</b> ${P.info}<br>Drag onto the circuit, or click to append.`; }
+TIPS["add-ycomb"] = () => `<b>Y-combiner.</b> Two waveguides merge into one. Light arriving in phase joins the output; light out of phase is radiated away and shown as “Lost at B…”. By default the waveguides below move up to close the gap. (A Y-splitter set to “combines”.)<br>Drag onto the circuit, or click to append.`;
+const tipEl = document.createElement("div"); tipEl.className = "tip"; tipEl.setAttribute("role", "tooltip"); tipEl.hidden = true; document.body.appendChild(tipEl);
+let tipTimer = null, tipFor = null;
+function hideTip() { clearTimeout(tipTimer); tipEl.hidden = true; tipFor = null; }
+function showTip(el) {
+  const f = TIPS[el.dataset.tipk]; if (!f) return;
+  const html = f(el); if (!html) return;
+  tipEl.innerHTML = html; tipEl.hidden = false; tipFor = el;
+  const r = el.getBoundingClientRect(), tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+  let x = Math.min(Math.max(8, r.left), innerWidth - tw - 8), y = r.bottom + 8;
+  if (y + th > innerHeight - 8) y = Math.max(8, r.top - th - 8);
+  tipEl.style.left = x + "px"; tipEl.style.top = y + "px";
+}
+document.addEventListener("pointerover", e => {
+  if (e.pointerType === "touch" || drag || stretch) return;
+  const el = e.target.closest("[data-tipk]");
+  if (!el) { hideTip(); return; }
+  if (el === tipFor) return;
+  clearTimeout(tipTimer); tipTimer = setTimeout(() => showTip(el), 280);
+});
+document.addEventListener("pointerdown", hideTip);
+document.addEventListener("scroll", hideTip, true);
+document.addEventListener("focusin", e => { const el = e.target.closest("[data-tipk]"); if (el) showTip(el); else hideTip(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") hideTip(); });
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawChart);
+new MutationObserver(drawChart).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+normalize(); drawInputs(); drawToggles(); drawPresets(); drawMyParts(); drawRail(); drawParams(); update();
+</script>
