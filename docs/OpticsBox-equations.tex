@@ -1,0 +1,521 @@
+\documentclass[10pt,a4paper]{article}
+% Only packages already in the local MiKTeX tree (no geometry/mathtools/fancyhdr).
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{array,tabularx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+
+% ---------- page layout (A4, by hand) ----------
+\setlength{\paperwidth}{210mm}\setlength{\paperheight}{297mm}
+\setlength{\pdfpagewidth}{\paperwidth}\setlength{\pdfpageheight}{\paperheight}
+\setlength{\textwidth}{166mm}\setlength{\oddsidemargin}{22mm}\addtolength{\oddsidemargin}{-1in}
+\setlength{\evensidemargin}{\oddsidemargin}
+\setlength{\textheight}{245mm}\setlength{\topmargin}{18mm}\addtolength{\topmargin}{-1in}
+\setlength{\headheight}{0pt}\setlength{\headsep}{0pt}\setlength{\footskip}{12mm}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt plus 1pt}
+\renewcommand{\arraystretch}{1.15}
+
+% ---------- colours and headings ----------
+\definecolor{accent}{HTML}{1F5C99}
+\definecolor{soft}{HTML}{EEF3F9}
+\definecolor{rule}{HTML}{B9CBE0}
+\definecolor{muted}{HTML}{5A6470}
+\titleformat{\section}{\large\bfseries\color{accent}}{\thesection}{0.7em}{}[{\color{rule}\titlerule[0.6pt]}]
+\titleformat{\subsection}{\normalsize\bfseries\color{accent}}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+\titlespacing*{\subsection}{0pt}{10pt}{3pt}
+
+% one box per component: title, then content
+\newtcolorbox{comp}[1]{colback=white,colframe=rule,boxrule=0.6pt,arc=2pt,
+  left=7pt,right=7pt,top=5pt,bottom=5pt,before skip=8pt,after skip=8pt,
+  title={#1},coltitle=accent,colbacktitle=soft,fonttitle=\bfseries,toptitle=2pt,bottomtitle=2pt}
+\newtcolorbox{keybox}{colback=soft,colframe=soft,arc=2pt,left=8pt,right=8pt,top=6pt,bottom=6pt,
+  before skip=8pt,after skip=8pt}
+
+\newcommand{\fwd}{\text{\textcolor{muted}{\small\textsc{forward only:}}}\ }
+\newcommand{\pars}[1]{\textcolor{muted}{\normalfont\small #1}}
+\newcommand{\jj}{\mathrm{j}}
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\T}{\mathsf{T}}
+\allowdisplaybreaks
+
+\begin{document}
+
+% ---------- title ----------
+\begin{center}
+  {\LARGE\bfseries\color{accent} OpticsBox}\\[3pt]
+  {\large Equation and matrix reference}\\[4pt]
+  {\small\color{muted} Every formula the simulator uses: the web app (\texttt{OpticsBox.html}) and the Python library
+  (\texttt{opticsbox.py}) implement exactly these, and agree to about $10^{-13}$.}
+\end{center}
+\vspace{2pt}
+
+\setcounter{tocdepth}{1}\tableofcontents
+
+% =====================================================================
+\section{Conventions}
+
+\paragraph{Field vector.} At any cross-section of a circuit with $N$ waveguides the state is
+\[
+  \mathbf{E} = \bigl(E_1^{+},\,E_1^{-},\,E_2^{+},\,E_2^{-},\,\dots,\,E_N^{+},\,E_N^{-}\bigr)^{\T},
+\]
+where $+$ travels forward (left to right, input to output), $-$ travels backward, and the index is the waveguide.
+In the \emph{forward-only} model the backward entries are dropped and $\mathbf{E}=(E_1^{+},\dots,E_N^{+})^{\T}$.
+
+\paragraph{Transfer matrices.} Every component maps the fields on its left to the fields on its right,
+\[
+  \mathbf{E}_{\text{right}} = M\,\mathbf{E}_{\text{left}},
+\]
+so a circuit of components $B_1,B_2,\dots,B_n$ (in the order the light meets them) has
+\[
+  \boxed{\,T = B_n \cdots B_2\, B_1\,}
+  \qquad (2N\times 2N \text{ bidirectional},\; N\times N \text{ forward only}).
+\]
+
+\paragraph{Local matrices.} Each component has a small \emph{local} matrix on the waveguides it touches
+($2\times2$ for one waveguide, $4\times4$ for two, \dots, bidirectional). It is embedded in the identity: if the local
+matrix $M$ acts on the index set $\mathcal{I}$, then $B = \mathbb{I}$ with $B[\mathcal{I},\mathcal{I}] = M$, and every
+other waveguide passes unchanged. A component placed on ``all waveguides'' (waveguide section, chip edge) is block-diagonal,
+one block per waveguide.
+
+\paragraph{Phase sign.} Forward propagation over a length $L$ picks up $\e^{-\jj\beta L}$; the directional coupler is
+$\left(\begin{smallmatrix}\tau & -\jj\kappa\\ -\jj\kappa & \tau\end{smallmatrix}\right)$ in the forward basis. Components have no length of
+their own unless a length is one of their parameters.
+
+\paragraph{Radiation channels.} Every Y-splitter gets an extra lane numbered after the real waveguides
+($N+1, N+2,\dots$). It carries the light the junction radiates away, so the circuit matrix is $2(N+N_Y)$ square and stays
+lossless; the power in these lanes is reported as \emph{lost} light.
+
+\paragraph{Units.} Wavelength $\lambda$ in nm, lengths $L$ in \textmu m, waveguide loss in dB/cm, Bragg coupling $\kappa_g$ in
+mm$^{-1}$; all are converted to SI (m, m$^{-1}$) inside the formulas below.
+
+% =====================================================================
+\section{Propagation}
+
+\subsection{Propagation constant $\beta(\lambda)$}
+Without a group index (the default, constant effective index $n_{\text{eff}}$):
+\[
+  \beta(\lambda) = \frac{2\pi\, n_{\text{eff}}}{\lambda}.
+\]
+With a group index $n_g$ and reference wavelength $\lambda_0$ (first-order dispersion):
+\[
+  \beta(\lambda) = \frac{2\pi\, n_{\text{eff}}}{\lambda_0} + \frac{2\pi\, n_g}{\lambda_0^{2}}\,(\lambda_0-\lambda),
+\]
+so $n_{\text{eff}}$ fixes the phase at $\lambda_0$ and $n_g = n_{\text{eff}} - \lambda\,\dd n_{\text{eff}}/\dd\lambda$ fixes
+how fast it changes. With $n_g = n_{\text{eff}}$ this is the tangent line of the constant-index model at $\lambda_0$
+(equal at $\lambda_0$, off by about $2\pi n_{\text{eff}}(\lambda-\lambda_0)^2/\lambda_0^3$ elsewhere). The same $\beta(\lambda)$ is used by
+every component that has a length.
+
+\subsection{Loss}
+A loss of $\ell$ dB/cm is the power attenuation coefficient
+\[
+  \alpha = \ell \cdot 100 \cdot \frac{\ln 10}{10}\ \ \text{m}^{-1},
+  \qquad\text{field amplitude} \propto \e^{-\alpha L/2}.
+\]
+A lumped loss of $\ell$ dB is the field factor $a = 10^{-\ell/20}$.
+
+\subsection{One pass of a waveguide}
+\[
+  \boxed{\,g(L,\lambda) = \exp\!\Bigl[-\Bigl(\jj\beta(\lambda) + \tfrac{\alpha}{2}\Bigr) L\Bigr]\,}
+\]
+Every length-dependent formula is written in terms of $g$ (rings use $e = g(L_{\text{ring}})$, one trip round the ring).
+
+% =====================================================================
+\section{Component matrices}
+Each box gives the local bidirectional matrix (basis $E^{+},E^{-}$ per waveguide) and the forward-only version.
+For two-waveguide components the basis is $(E_1^{+},E_1^{-},E_2^{+},E_2^{-})$.
+
+\begin{comp}{Waveguide section \pars{(length $L_k$ on each waveguide $k$)}}
+\[
+  W(L) = \begin{pmatrix} g(L) & 0\\ 0 & 1/g(L)\end{pmatrix},\qquad
+  B = \operatorname{diag}\bigl(W(L_1), W(L_2), \dots, W(L_N)\bigr).
+\]
+\fwd $\operatorname{diag}\bigl(g(L_1),\dots,g(L_N)\bigr)$.\\
+\pars{Two arms differing by $\Delta L$ give a Mach--Zehnder free spectral range $\mathrm{FSR}\approx \lambda^2/(n_g\,\Delta L)$.}
+\end{comp}
+
+\begin{comp}{Phase shifter (heater) \pars{(extra phase $\theta$, wavelength-independent)}}
+\[
+  P(\theta) = \begin{pmatrix} \e^{-\jj\theta} & 0\\ 0 & \e^{\jj\theta}\end{pmatrix}
+  \qquad \fwd \e^{-\jj\theta}.
+\]
+\end{comp}
+
+\begin{comp}{Loss element \pars{(loss $\ell$ dB, $a=10^{-\ell/20}$)}}
+\[
+  A(\ell) = \begin{pmatrix} a & 0\\ 0 & 1/a\end{pmatrix}
+  \qquad \fwd a.
+\]
+\end{comp}
+
+\begin{comp}{Partial mirror}
+\emph{Power-reflectance form} ($0\le R<1$; reflects $\jj\sqrt{R}$ from either side, transmits $t=\sqrt{1-R}$):
+\[
+  M_R = \frac{1}{t}\begin{pmatrix} 1 & \jj\sqrt{R}\\ -\jj\sqrt{R} & 1\end{pmatrix}.
+\]
+\emph{Field-reflection form} ($-1<r<1$, Fresnel/Stokes: reflects $r$ from the left, $-r$ from the right, $t=\sqrt{1-r^2}$):
+\[
+  M_r = \frac{1}{t}\begin{pmatrix} 1 & -r\\ -r & 1\end{pmatrix},\qquad M_r\,M_{-r} = \mathbb{I}.
+\]
+\fwd $t$ (what passes) in both forms.
+\end{comp}
+
+\begin{comp}{Chip edge / grating coupler \pars{(loss $\ell$ dB, reflection $R$; on every waveguide)}}
+Loss followed by a mirror, the reflection being the one seen from the input side:
+\[
+  E = A(\ell)\,M_R = \frac{1}{t}\begin{pmatrix} a & \jj a\sqrt{R}\\ -\jj\sqrt{R}/a & 1/a\end{pmatrix},
+  \quad t=\sqrt{1-R}
+  \qquad \fwd a\sqrt{1-R}.
+\]
+\end{comp}
+
+\begin{comp}{Sagnac loop mirror (SLM) \pars{(coupler $\kappa$, $\tau=\sqrt{1-\kappa^2}$, loop phase $\varphi$)}}
+\[
+  S(\kappa,\varphi) = \frac{1}{1-2\kappa^2}
+  \begin{pmatrix} \e^{-\jj\varphi} & -2\jj\kappa\tau\\ 2\jj\kappa\tau & \e^{\jj\varphi}\end{pmatrix}
+  \qquad \fwd (1-2\kappa^2)\,\e^{-\jj\varphi}.
+\]
+The loop phase is either set directly, or follows the loop length: $\varphi = \beta(\lambda)\,L_{\text{loop}}$. In that case the
+loop also has the waveguide loss: $\e^{-\jj\varphi}$ becomes $g(L_{\text{loop}})$ and $\e^{\jj\varphi}$ becomes $1/g(L_{\text{loop}})$, i.e.\ $\varphi \to \varphi - \jj\alpha L_{\text{loop}}/2$.
+On its own the SLM reflects $|\rho|^2 = 4\kappa^2(1-\kappa^2)$ of the power and passes $(1-2\kappa^2)^2$.
+At $\kappa^2 = \tfrac12$ it is a perfect mirror and has no transfer matrix (the app refuses this value in the bidirectional model).
+The ``SLM pair'' is $\operatorname{diag}(S_1,S_2)$, one on each waveguide.
+\end{comp}
+
+\begin{comp}{Directional coupler \pars{(field coupling $\kappa$, $\tau=\sqrt{1-\kappa^2}$; $\kappa^2$ of the power crosses)}}
+\[
+  K(\kappa) = \begin{pmatrix}
+     \tau & 0 & -\jj\kappa & 0\\
+     0 & \tau & 0 & \jj\kappa\\
+     -\jj\kappa & 0 & \tau & 0\\
+     0 & \jj\kappa & 0 & \tau
+  \end{pmatrix}
+  \qquad \fwd \begin{pmatrix} \tau & -\jj\kappa\\ -\jj\kappa & \tau\end{pmatrix}.
+\]
+\end{comp}
+
+\begin{comp}{Wavelength-dependent coupler \pars{($\kappa_0$ at $\lambda_0$, slope $s$ in \% per nm)}}
+The coupling angle $p$ grows linearly with wavelength:
+\[
+  p(\lambda) = \arcsin(\kappa_0)\Bigl[1+\frac{s}{100}(\lambda-\lambda_0)\Bigr],\qquad
+  \tau=\cos p,\ \ \kappa=\sin p,
+\]
+and the matrix is $K$ above with these $\tau,\kappa$ (forward: the same $2\times2$).
+\end{comp}
+
+\begin{comp}{MMI 50/50 splitter \pars{(excess loss $\ell$ dB, $a=10^{-\ell/20}$, $s=1/\sqrt2$)}}
+\[
+  \begin{pmatrix}
+     a s & 0 & -\jj a s & 0\\
+     0 & s/a & 0 & \jj s/a\\
+     -\jj a s & 0 & a s & 0\\
+     0 & \jj s/a & 0 & s/a
+  \end{pmatrix}
+  \qquad \fwd a s\begin{pmatrix} 1 & -\jj\\ -\jj & 1\end{pmatrix}.
+\]
+\end{comp}
+
+\begin{comp}{Waveguide crossing \pars{(ideal; swaps two neighbouring waveguides)}}
+\[
+  X = \begin{pmatrix} 0&0&1&0\\0&0&0&1\\1&0&0&0\\0&1&0&0\end{pmatrix}
+  \qquad \fwd \begin{pmatrix} 0&1\\1&0\end{pmatrix}.
+\]
+\end{comp}
+
+\begin{comp}{All-pass ring resonator \pars{(coupling $\kappa$, $\tau=\sqrt{1-\kappa^2}$, circumference $L$, backscatter $r_s$)}}
+One trip round the ring is $e = g(L,\lambda) = a\,\e^{-\jj\theta}$. Without backscatter ($r_s=0$):
+\[
+  t = \frac{\tau - e}{1-\tau e},\qquad
+  \mathcal{R} = \begin{pmatrix} t & 0\\ 0 & 1/t\end{pmatrix}
+  \qquad \fwd t.
+\]
+\emph{With backscatter:} a lossless point scatterer half-way round couples the clockwise and counter-clockwise waves
+(transmission $t_s=\sqrt{1-r_s^2}$, reflection $\jj r_s$). With
+\[
+  q = 1-\tau t_s e,\qquad
+  G = t_s e - \frac{r_s^2\,\tau\, e^2}{q}\quad\text{(one trip, including the detour through the other direction)},
+\]
+\[
+  t = \frac{\tau - G}{1-\tau G},\qquad
+  \rho = \frac{-\jj\kappa^2 r_s\, e}{(1-\tau G)\,q},\qquad
+  \mathcal{R} = \frac{1}{t}\begin{pmatrix} t^2-\rho^2 & \rho\\ -\rho & 1\end{pmatrix}
+  \qquad \fwd t.
+\]
+$\rho$ is the reflection back into the bus (the same from either side). Each resonance splits into two, at round-trip phases
+$2\pi m \pm \arcsin r_s$, i.e.\ $\Delta\lambda_{\text{split}} = \tfrac{\arcsin r_s}{\pi}\,\mathrm{FSR}$.
+Special case $\kappa=0$: $t=1$, $\rho=0$ (the ring is not coupled, also on an exact resonance).\\
+\pars{Resonance spacing: $\mathrm{FSR} = \lambda_0^2/(n_g L)$ (with no group index set, $\lambda^2/(n_{\text{eff}}L)$).}
+\end{comp}
+
+\begin{comp}{Add-drop ring \pars{(couplings $\kappa_1$ to waveguide 1, $\kappa_2$ to waveguide 2, $\tau_i=\sqrt{1-\kappa_i^2}$, circumference $L$)}}
+With the half and full trips $e_h = g(L/2,\lambda)$, $e = e_h^2$:
+\[
+  D = 1-\tau_1\tau_2 e,\qquad
+  t = \frac{\tau_1-\tau_2 e}{D},\qquad
+  t' = \frac{\tau_2-\tau_1 e}{D},\qquad
+  d = \frac{-\kappa_1\kappa_2\, e_h}{D}.
+\]
+$t$, $t'$ are the through transmissions of waveguides 1 and 2 and $d$ the drop. Dropped light leaves the \emph{other}
+waveguide travelling \emph{backwards} (the drop port is on the input side), which gives
+\[
+  \begin{pmatrix}
+     t - d^2/t' & 0 & 0 & d/t'\\
+     0 & 1/t & -d/t & 0\\
+     0 & d/t & t' - d^2/t & 0\\
+     -d/t' & 0 & 0 & 1/t'
+  \end{pmatrix}
+  \qquad \fwd \begin{pmatrix} t & 0\\ 0 & t'\end{pmatrix}.
+\]
+If $\kappa_1=\kappa_2=0$ the matrix is $\mathbb{I}$.
+\end{comp}
+
+\begin{comp}{Ring set by a resonance wavelength \pars{(any ring: all-pass, add-drop, CROW, OSSB filter)}}
+Instead of its length, a ring can be given a wavelength $\lambda_{\text{res}}$ and a rough length $L_0$. It then uses the length
+nearest $L_0$ that holds a whole number of wavelengths at $\lambda_{\text{res}}$, so a resonance sits exactly there (also with
+dispersion):
+\[
+  m = \max\bigl(1,\ \operatorname{round}\bigl(\beta(\lambda_{\text{res}})\,L_0/2\pi\bigr)\bigr),\qquad L = \frac{2\pi m}{\beta(\lambda_{\text{res}})}.
+\]
+\end{comp}
+
+\begin{comp}{Coupled-resonator waveguide, CROW \pars{($n$ identical rings of circumference $L$ in a chain between two waveguides)}}
+Ring 1 is beside waveguide 1 and ring $n$ beside waveguide 2. The $n+1$ couplers are $\kappa_0=\kappa_1$ (waveguide 1 -- ring 1),
+$\kappa_i=\kappa_r$ between neighbouring rings, and $\kappa_n=\kappa_2$ (ring $n$ -- waveguide 2); $\tau_i=\sqrt{1-\kappa_i^2}$ and
+$h = g(L/2,\lambda)$ is half a trip. Looking up the chain from coupler $i$, $\Gamma_i$ is what comes back (nothing enters waveguide 2):
+\[
+  \Gamma_n = 0,\qquad \Gamma_{i-1} = h^2\,\frac{\tau_i-\Gamma_i}{1-\tau_i\Gamma_i},\qquad
+  t = \frac{\tau_0-\Gamma_0}{1-\tau_0\Gamma_0},
+\]
+\[
+  x_0 = \frac{-\jj\kappa_0}{1-\tau_0\Gamma_0},\qquad x_i = \frac{-\jj\kappa_i\,h\,x_{i-1}}{1-\tau_i\Gamma_i},\qquad d = x_n,
+\]
+and $t'$ is $t$ computed from the other end (the $\kappa_i$ reversed). With one ring these are the add-drop ring's $t$, $t'$, $d$.
+The rings turn alternately clockwise and counter-clockwise, so with an \emph{odd} $n$ the drop leaves waveguide 2 travelling
+backwards and the matrix has the add-drop form above; with an \emph{even} $n$ it goes forwards:
+\[
+  \Delta = tt'-d^2,\qquad
+  \begin{pmatrix}
+     t & 0 & d & 0\\
+     0 & t'/\Delta & 0 & -d/\Delta\\
+     d & 0 & t' & 0\\
+     0 & -d/\Delta & 0 & t/\Delta
+  \end{pmatrix}
+  \qquad \fwd \begin{pmatrix} t & d\\ d & t'\end{pmatrix}
+  \quad\bigl(\text{odd } n\text{: } \operatorname{diag}(t,t')\bigr).
+\]
+\end{comp}
+
+\begin{comp}{Mach--Zehnder interferometer, MZI \pars{(couplers $\kappa_1$, $\kappa_2$; arm $a$ of length $L_a$ with a heater $\theta$, arm $b$ of length $L_b$)}}
+With $A = \e^{-\jj\theta}\,g(L_a,\lambda)$ on waveguide 1 and $B = g(L_b,\lambda)$ on waveguide 2,
+\[
+  M = K(\kappa_2)\,\operatorname{diag}\bigl(A,\ 1/A,\ B,\ 1/B\bigr)\,K(\kappa_1),
+\]
+\[
+  \fwd
+  \begin{pmatrix}
+     \tau_1\tau_2 A - \kappa_1\kappa_2 B & -\jj(\tau_2\kappa_1 A + \kappa_2\tau_1 B)\\
+     -\jj(\kappa_2\tau_1 A + \tau_2\kappa_1 B) & \tau_1\tau_2 B - \kappa_1\kappa_2 A
+  \end{pmatrix}.
+\]
+Nothing is reflected. Fringes are $\lambda_0^2/(n_g\,|L_b-L_a|)$ apart.
+\end{comp}
+
+\begin{comp}{OSSB filter (ring-assisted MZI) \pars{(both couplers $\kappa$; on arm $a$ an all-pass ring $\kappa_r$, $L$)}}
+The MZI above with $\kappa_1=\kappa_2=\kappa$ and an all-pass ring on arm $a$: $A = t_r\,\e^{-\jj\theta}\,g(L_a,\lambda)$, with
+$t_r = (\tau_r-e)/(1-\tau_r e)$, $e = g(L,\lambda)$. Near each resonance the ring's phase turns by $2\pi$ over a narrow band, which
+gives the MZI one very steep edge: one sideband of a modulated carrier passes, the other is blocked. With $L = 2|L_b-L_a|$ and
+$\theta=\pi/2$ the pass and stop bands alternate every half ring FSR.
+\end{comp}
+
+\begin{comp}{Uniform Bragg grating \pars{(Bragg wavelength $\lambda_B$, length $L$, coupling $\kappa_g$; coupled-mode theory)}}
+The period is chosen so the reflection peaks at $\lambda_B$: $\beta_B = \beta(\lambda_B) = \pi/\Lambda$. With the detuning
+(waveguide loss enters as $\beta\to\beta-\jj\alpha/2$)
+\[
+  \delta = \beta(\lambda) - \beta_B - \jj\frac{\alpha}{2},\qquad
+  \gamma = \sqrt{\kappa_g^2-\delta^2},\qquad
+  C = \cosh\gamma L,\qquad
+  S = \frac{\sinh\gamma L}{\gamma}\ \ (S=L \text{ if } \gamma\to0),
+\]
+\[
+  G_B = \begin{pmatrix}
+     \e^{-\jj\beta_B L}\,(C-\jj\delta S) & -\jj\kappa_g S\,\e^{-\jj\beta_B L}\\[2pt]
+     \jj\kappa_g S\,\e^{\jj\beta_B L} & \e^{\jj\beta_B L}\,(C+\jj\delta S)
+  \end{pmatrix}
+  \qquad \fwd \frac{\e^{-\jj\beta_B L}}{C+\jj\delta S}.
+\]
+Lossless peak reflection $R_{\max} = \tanh^2(\kappa_g L)$; first reflection null
+$\Delta\lambda = \dfrac{\lambda_0^2}{2\pi n_g L}\sqrt{(\kappa_g L)^2+\pi^2}$ from the peak.
+With $\kappa_g=0$ the grating is exactly a waveguide section of length $L$.
+The matrix is the solution of the coupled-mode equations $R' = -\jj\delta R - \jj\kappa_g S$, $S' = \jj\kappa_g R + \jj\delta S$ for
+$E^{+} = R\,\e^{-\jj\beta_B z}$, $E^{-} = S\,\e^{\jj\beta_B z}$, with the teeth counted from the left end ($z=0$). Two gratings in a row are
+therefore in step only when the first is a whole number of periods long ($\e^{2\jj\beta_B L_1}=1$, period $\Lambda=\lambda_B/2n_{\text{eff}}$).
+\end{comp}
+
+\begin{comp}{Y-splitter \pars{(stem on waveguide $k$, branches on $k$ and $k{+}1$, plus its radiation lane $r$)}}
+The junction is a real orthogonal matrix $U$ (so it is lossless), used for both directions:
+the bidirectional local matrix is $U\otimes\mathbb{I}_2$, i.e.\ $M[2i,2j]=M[2i{+}1,2j{+}1]=U_{ij}$.
+Lane order is (stem, branch, \dots, radiation); $s = 1/\sqrt2$.
+
+\emph{Plain junction, stem on the upper waveguide} (lanes $k$, $k{+}1$, $r$):
+\[
+  U_{\text{split}} = \begin{pmatrix} s & 0 & s\\ s & 0 & -s\\ 0 & 1 & 0\end{pmatrix},\qquad
+  U_{\text{combine}} = U_{\text{split}}^{\T} = \begin{pmatrix} s & s & 0\\ 0 & 0 & 1\\ s & -s & 0\end{pmatrix}.
+\]
+Splitting, the stem's light goes $s$ into each branch; combining, the in-phase part leaves on the stem and the
+out-of-phase part, $(E_k-E_{k+1})/\sqrt2$, is radiated.
+
+\emph{Stem on the lower waveguide}:
+\[
+  U_{\text{split}} = \begin{pmatrix} 0 & s & -s\\ 0 & s & s\\ 1 & 0 & 0\end{pmatrix},\qquad
+  U_{\text{combine}} = \begin{pmatrix} 0 & 0 & 1\\ s & s & 0\\ -s & s & 0\end{pmatrix}.
+\]
+
+\emph{``Make room''} (stem on top): the waveguides below the branch shift down one place (split) or up (combine), so the
+junction acts on $m$ lanes: $k,\dots,N$ and $r$. For the split, with $\ell = m-2$ (indices from $0$),
+\[
+  U_{00}=U_{0,m-1}=U_{10}=s,\quad U_{1,m-1}=-s,\quad U_{j+1,j}=1\ (1\le j<\ell),\quad U_{m-1,\ell}=1,
+\]
+all other entries $0$; the combine is its transpose. Light already on the bottom waveguide has nowhere to move to and goes into
+the radiation lane (the app warns about this).
+
+\emph{Path lengths:} an optional branch length $L_b$ adds $W(L_b)$ on both branches (after a split, before a combine), and a
+shift length $L_s$ adds $W(L_s)$ on every other waveguide that steps half a spacing aside at the junction. With $L_s = L_b$ all
+paths gain the same phase.\\
+\fwd the same $U$ (it has no reflections).
+\end{comp}
+
+\begin{comp}{Custom components (groups)}
+A saved sub-circuit is opened up: its components are placed, in order, on the waveguides it occupies (offset by its position),
+so it contributes the product of its own component matrices. Each Y-splitter inside still gets its own radiation lane.
+\end{comp}
+
+% =====================================================================
+\section{Forward-only model}
+The forward-only matrix of a component is its forward transmission with nothing entering from the right and the reflections
+discarded. Splitting a local bidirectional matrix into forward ($f$) and backward ($b$) rows and columns, it is the Schur complement
+\[
+  \boxed{\,M_{\text{fwd}} = M_{ff} - M_{fb}\,M_{bb}^{-1}\,M_{bf}\,}
+  \qquad\bigl(= 1/M_{22} \text{ for one waveguide}\bigr),
+\]
+and $M_{\text{fwd}} = M_{ff}$ when the component does not reflect. The circuit is then $T = B_n\cdots B_1$ with these
+$N\times N$ matrices. (Note: the forward-only model multiplies the per-component transmissions, so it ignores multiple
+reflections \emph{between} components; the bidirectional model includes them.)
+
+% =====================================================================
+\section{Solving the circuit}
+
+\subsection{Inputs}
+Light enters on the left only. The input amplitude vector $\mathbf{A}$ is one of
+\[
+  \mathbf{A} = \mathbf{e}_k \ \text{(one waveguide)},\qquad
+  A_k = 1\ \forall k\ \text{(all, in phase)},\qquad
+  A_k = a_k\,\e^{\jj\phi_k}\ \text{(custom)},
+\]
+padded with zeros on the radiation lanes. The input power is $P_{\text{in}} = \sum_k |A_k|^2$.
+
+\subsection{Forward-only}
+\[
+  \mathbf{o} = T\,\mathbf{A},\qquad \mathbf{r} = \mathbf{0}.
+\]
+
+\subsection{Bidirectional}
+On the left the forward fields are known ($\mathbf{A}$) and the backward fields $\mathbf{b}$ (the reflections) are unknown; on the
+right nothing comes back in, $\mathbf{E}^{-}_{\text{right}} = \mathbf{0}$. Splitting $T$ into forward/backward blocks:
+\[
+  \begin{pmatrix}\mathbf{o}\\ \mathbf{0}\end{pmatrix} =
+  \begin{pmatrix} T_{ff} & T_{fb}\\ T_{bf} & T_{bb}\end{pmatrix}
+  \begin{pmatrix}\mathbf{A}\\ \mathbf{b}\end{pmatrix}
+  \quad\Longrightarrow\quad
+  \boxed{\,\mathbf{b} = -T_{bb}^{-1}\,T_{bf}\,\mathbf{A},\qquad
+  \mathbf{o} = T_{ff}\,\mathbf{A} + T_{fb}\,\mathbf{b}\,}
+\]
+($T_{bb}$ is solved by Gaussian elimination with partial pivoting; it is singular only at a genuine blow-up, e.g.\ a perfect mirror.)
+
+\subsection{Reported quantities}
+\begin{align*}
+  \text{output power at waveguide } k:&\quad P^{\text{out}}_k = |o_k|^2/P_{\text{in}},
+  \qquad \text{reflected: } P^{\text{back}}_k = |b_k|^2/P_{\text{in}},\\
+  \text{lost at Y-splitter } j:&\quad P^{\text{lost}}_j = \bigl(|o_{N+j}|^2 + |b_{N+j}|^2\bigr)/P_{\text{in}},\\
+  \text{in dB:}&\quad 10\log_{10}\max(P,\,10^{-30}),\qquad \text{phase: } \arg o_k,\\
+  \text{energy balance:}&\quad \mathcal{E} = \textstyle\sum_k P^{\text{out}}_k + \sum_k P^{\text{back}}_k + \sum_j P^{\text{lost}}_j
+  \ \ (=1 \text{ for a lossless circuit}),\\
+  \text{forward-only:}&\quad \text{``gets through''} = \textstyle\sum_k P^{\text{out}}_k .
+\end{align*}
+The Matrices tab also shows $|\det T|$, which is exactly $1$ for any lossless bidirectional circuit (every component above has
+$|\det| = 1$ when lossless).
+
+\subsection{Spectrum sweep}
+The spectrum evaluates the whole circuit at $N_p$ wavelengths spread evenly over the span $\Delta$ about the centre $\lambda_c$:
+\[
+  \lambda_i = \lambda_c - \frac{\Delta}{2} + \Delta\,\frac{i}{N_p-1},\qquad i = 0,\dots,N_p-1,
+\]
+rebuilding $T(\lambda_i)$ and solving for $\mathbf{o},\mathbf{b}$ at each one. $N_p$ is at most 5001, and a large circuit is given
+fewer points so the page stays quick: with $W$ an estimate of the work for one wavelength (a fixed part, a part per component,
+$k^2 D$ for each $k\times k$ component matrix applied to the $D\times D$ circuit matrix, and the solve for $\mathbf{b}$),
+$N_p \le \max(11,\ \lfloor 4\times10^{6}/W\rfloor)$. The estimate depends only on the circuit, so the same circuit always gets the same
+number of points, and the exported Python uses that number.
+
+\subsection{Phase and group delay}
+The Phase chart is the phase $\varphi_k(\lambda) = \arg o_k$ (or $\arg b_k$), followed continuously from its value at the centre
+wavelength: $\varphi(\lambda_{i+1}) = \varphi(\lambda_i) + \arg\!\bigl(o(\lambda_{i+1})\,o^{*}(\lambda_i)\bigr)$. The Delay chart is the group delay
+\[
+  \boxed{\,\tau_g = -\frac{\dd\varphi}{\dd\omega} = \frac{\lambda^{2}}{2\pi c}\,\frac{\dd\varphi}{\dd\lambda}\,}
+\]
+with the derivative taken by central differences on the sweep grid. For a waveguide $\varphi=-\beta L$, so $\tau_g = n_g L/c$
+($n_{\text{eff}}L/c$ with no group index). A lossless all-pass ring on resonance gives $\tau_g = \dfrac{n_g L}{c}\,\dfrac{1+\tau}{1-\tau}$.
+Where the light at a port passes through zero its phase jumps by $\pi$; such a jump is not a delay and is left out.
+
+\subsection{Light inside the circuit (Light view and Probe)}
+With $\mathbf{E}_0 = (A_1, b_1, A_2, b_2, \dots)^{\T}$ the solved field at the input end, the field after the first $m$ components is
+\[
+  \mathbf{E}_m = B_m \cdots B_1\,\mathbf{E}_0 ,
+\]
+and the power travelling forward and backward in waveguide $k$ at that point is $|E_{m,k}^{+}|^2/P_{\text{in}}$ and
+$|E_{m,k}^{-}|^2/P_{\text{in}}$. The Light view shows these between components. Inside a resonator it shows the circulating power,
+from the fields arriving at it ($a$ forward from the left, $a'$ backward from the right):
+\begin{align*}
+  \text{all-pass ring:}&\quad
+  \begin{pmatrix} q & -\jj\tau r_s e\\ -\jj\tau r_s e & q\end{pmatrix}
+  \begin{pmatrix} c\\ d\end{pmatrix} = -\jj\kappa\begin{pmatrix} a\\ a'\end{pmatrix},\qquad q = 1-\tau t_s e
+  \quad\Bigl(r_s=0:\ c = \frac{-\jj\kappa\,a}{1-\tau e}\Bigr),\\
+  \text{add-drop ring:}&\quad c = \frac{-\jj\kappa_1 a_1 - \jj\kappa_2\tau_1 e_h\,a_2'}{1-\tau_1\tau_2 e},\qquad
+  d = \frac{-\jj\kappa_1 a_1' - \jj\kappa_2\tau_1 e_h\,a_2}{1-\tau_1\tau_2 e},\\
+  \text{SLM loop:}&\quad c = \tau a - \jj\kappa a',\qquad d = -\jj\kappa a + \tau a' ,\\
+  \text{OSSB ring:}&\quad \text{the all-pass ring, with } a = \tau a_1 - \jj\kappa a_2,\quad
+  a' = \e^{-\jj\theta} g(L_a)\,(\tau b_1 - \jj\kappa b_2),
+\end{align*}
+where $c$, $d$ are the two directions round the ring or loop ($b_1$, $b_2$: backward fields arriving on the right). In a CROW
+the waves in every ring are found together, by solving the coupler equations for all rings at once. A lossless ring of coupling $\kappa$ on resonance holds
+$|c|^2 = \kappa^2/(1-\tau)^2$ times the power arriving; an add-drop ring with $\kappa_1=\kappa_2=\kappa$ holds $1/\kappa^2$ times.
+
+\clearpage
+% =====================================================================
+\section{Derived results used as checks}
+The Python library runs 64 self-checks (\texttt{python opticsbox.py}). They include the closed-form results below, and independent
+derivations: the Sagnac loop mirror, the ring (with loss and backscatter), the add-drop ring and the CROW (1 to 5 rings) are each rebuilt from couplers,
+lengths of waveguide and point reflectors and solved for their internal waves; the Bragg grating is compared with a thin-film
+stack of 600 quarter-wave periods; every component's scattering matrix is checked to be symmetric (reciprocal), and unitary when
+lossless; and 200 random circuits are solved a second way, as a network of scattering matrices.
+
+\begin{keybox}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.33\linewidth}X@{}}
+Coupler split & $\kappa^2$ crosses, $1-\kappa^2$ stays.\\
+Mach--Zehnder & $\mathrm{FSR} \approx \lambda^2/(n_g\,\Delta L)$.\\
+Ring / add-drop ring & $\mathrm{FSR} = \lambda_0^2/(n_g L)$ (no group index: $\lambda^2/(n_{\text{eff}} L)$).\\
+Ring backscatter splitting & $\Delta\lambda = (\arcsin r_s/\pi)\,\mathrm{FSR}$.\\
+SLM alone & reflects $4\kappa^2(1-\kappa^2)$, passes $(1-2\kappa^2)^2$.\\
+Bragg grating & $R_{\max}=\tanh^2(\kappa_g L)$; first null at $\frac{\lambda_0^2}{2\pi n_g L}\sqrt{(\kappa_g L)^2+\pi^2}$.\\
+Fabry--P\'erot (two mirrors, gap $L$) &
+  $T = \dfrac{(1-R_1)(1-R_2)\,a^2}{(1-\sqrt{R_1R_2}\,a^2)^2 + 4\sqrt{R_1R_2}\,a^2\sin^2(\delta/2)}$,
+  with $a^2=\e^{-\alpha L}$ and round-trip phase $\delta = 2\beta L - \arg(\rho_1\rho_2)$ ($\rho_i$: mirror reflections seen from inside the cavity); $\mathrm{FSR}=\lambda_0^2/(2n_gL)$.\\
+Group delay & waveguide $n_g L/c$; all-pass ring on resonance $\frac{n_g L}{c}\,\frac{1+\tau}{1-\tau}$.\\
+Lossless circuits & $\mathcal{E}=1$ and $|\det T| = 1$; every component reciprocal ($S = S^{\T}$).
+\end{tabularx}
+\end{keybox}
+
+\end{document}
